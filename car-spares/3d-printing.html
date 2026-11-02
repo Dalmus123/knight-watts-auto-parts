@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Printing Service - AutoPartsKE | Custom Car Parts On-Demand</title>
+    <meta name="description" content="Can't find the part you need? We'll 3D print it for you! Custom car parts, rare components, and discontinued items printed on-demand in Embu & Garissa.">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="3d-printing-styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header (same as main site) -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                        <path d="M20 5L35 15V25L20 35L5 25V15L20 5Z" stroke="#00A86B" stroke-width="2" fill="none"/>
+                        <circle cx="20" cy="20" r="6" fill="#00A86B"/>
+                    </svg>
+                    <span>AutoParts<span class="ke">KE</span></span>
+                </div>
+                <nav class="nav">
+                    <a href="index.html" class="nav-link">Home</a>
+                    <a href="index.html#products" class="nav-link">Parts</a>
+                    <a href="3d-printing.html" class="nav-link active">3D Printing</a>
+                    <a href="index.html#contact" class="nav-link">Contact</a>
+                </nav>
+                <button class="btn btn-primary" onclick="scrollToRequest()">Request Custom Part</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="printing-hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-badge">🖨️ Revolutionary Service</div>
+                <h1>Can't Find It?<br/>We'll <span class="highlight">Print</span> It!</h1>
+                <p class="hero-subtitle">On-demand 3D printing for custom and rare car parts. From dashboard trim to custom mounts, we print what you need.</p>
+                <div class="hero-stats">
+                    <div class="stat">
+                        <strong>24-48hrs</strong>
+                        <span>Turnaround</span>
+                    </div>
+                    <div class="stat">
+                        <strong>70%</strong>
+                        <span>Cheaper vs OEM</span>
+                    </div>
+                    <div class="stat">
+                        <strong>500+</strong>
+                        <span>Parts Printed</span>
+                    </div>
+                </div>
+                <button class="btn btn-primary btn-large" onclick="scrollToRequest()">Get Your Custom Part →</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="how-it-works">
+        <div class="container">
+            <h2 class="section-title">How 3D Printing Works</h2>
+            <div class="steps-grid">
+                <div class="step-card">
+                    <div class="step-number">1</div>
+                    <div class="step-icon">📝</div>
+                    <h3>Describe Your Part</h3>
+                    <p>Tell us what you need, upload photos, or provide dimensions. Our AI analyzes your request.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">2</div>
+                    <div class="step-icon">🤖</div>
+                    <h3>AI Analysis & Quote</h3>
+                    <p>Our AI checks feasibility, selects best material, and gives instant pricing in minutes.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">3</div>
+                    <div class="step-icon">🖨️</div>
+                    <h3>We Print It</h3>
+                    <p>Your part goes to our 3D printer queue. Professional-grade printers work 24/7.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">4</div>
+                    <div class="step-icon">📦</div>
+                    <h3>Quality Check & Delivery</h3>
+                    <p>We inspect every part, then deliver to Embu or Garissa. Track your order in real-time.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Perfect For -->
+    <section class="perfect-for">
+        <div class="container">
+            <h2 class="section-title">Perfect For</h2>
+            <div class="use-cases-grid">
+                <div class="use-case">
+                    <div class="use-case-icon">🚗</div>
+                    <h3>Rare & Discontinued Parts</h3>
+                    <p>Own an older vehicle? We can recreate parts that are no longer manufactured.</p>
+                    <div class="examples">
+                        <span>Dashboard trim</span>
+                        <span>Knobs & handles</span>
+                        <span>Mounting brackets</span>
+                    </div>
+                </div>
+                <div class="use-case">
+                    <div class="use-case-icon">🔧</div>
+                    <h3>Interior Components</h3>
+                    <p>Replace broken plastic parts quickly and affordably.</p>
+                    <div class="examples">
+                        <span>Cup holders</span>
+                        <span>Air vent slats</span>
+                        <span>Clips & fasteners</span>
+                    </div>
+                </div>
+                <div class="use-case">
+                    <div class="use-case-icon">⭐</div>
+                    <h3>Custom Modifications</h3>
+                    <p>Personalize your vehicle with custom-designed parts.</p>
+                    <div class="examples">
+                        <span>Phone mounts</span>
+                        <span>Gauge bezels</span>
+                        <span>Custom logos</span>
+                    </div>
+                </div>
+                <div class="use-case">
+                    <div class="use-case-icon">🎯</div>
+                    <h3>Prototypes & Testing</h3>
+                    <p>Test fit and function before ordering expensive OEM parts.</p>
+                    <div class="examples">
+                        <span>Test assemblies</span>
+                        <span>Verify dimensions</span>
+                        <span>Trial & error</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Materials -->
+    <section class="materials-section">
+        <div class="container">
+            <h2 class="section-title">Professional Materials</h2>
+            <p class="section-subtitle">We use industrial-grade materials for durability and strength</p>
+            <div class="materials-grid">
+                <div class="material-card">
+                    <h4>PLA</h4>
+                    <div class="material-properties">
+                        <div class="property">
+                            <span class="property-label">Strength</span>
+                            <div class="property-bar"><div class="property-fill" style="width: 60%"></div></div>
+                        </div>
+                        <div class="property">
+                            <span class="property-label">Heat Resistance</span>
+                            <div class="property-bar"><div class="property-fill" style="width: 20%"></div></div>
+                        </div>
+                    </div>
+                    <p>Good for interior trim, decorative parts</p>
+                    <span class="material-price">From KSh 500</span>
+                </div>
+                <div class="material-card recommended">
+                    <div class="recommended-badge">Recommended</div>
+                    <h4>PETG</h4>
+                    <div class="material-properties">
+                        <div class="property">
+                            <span class="property-label">Strength</span>
+                            <div class="property-bar"><div class="property-fill" style="width: 80%"></div></div>
+                        </div>
+                        <div class="property">
+                            <span class="property-label">Heat Resistance</span>
+                            <div class="property-bar"><div class="property-fill" style="width: 60%"></div></div>
+                        </div>
+                    </div>
+                    <p>Strong, durable, heat-resistant. Best all-around choice</p>
+                    <span class="material-price">From KSh 700</span>
+                </div>
+                <div class="material-card">
+                    <h4>ABS</h4>
+                    <div class="material-properties">
+                        <div class="property">
+                            <span class="property-label">Strength</span>
+                            <div class="property-bar"><div class="property-fill" style="width: 80%"></div></div>
+                        </div>
+                        <div class="property">
+                            <span class="property-label">Heat Resistance</span>
+                            <div class="property-bar"><div class="property-fill" style="width: 80%"></div></div>
+                        </div>
+                    </div>
+                    <p>High heat resistance, very durable</p>
+                    <span class="material-price">From KSh 900</span>
+                </div>
+                <div class="material-card">
+                    <h4>TPU (Flexible)</h4>
+                    <div class="material-properties">
+                        <div class="property">
+                            <span class="property-label">Flexibility</span>
+                            <div class="property-bar"><div class="property-fill" style="width: 100%"></div></div>
+                        </div>
+                        <div class="property">
+                            <span class="property-label">Durability</span>
+                            <div class="property-bar"><div class="property-fill" style="width: 70%"></div></div>
+                        </div>
+                    </div>
+                    <p>Flexible material for gaskets, seals, dampeners</p>
+                    <span class="material-price">From KSh 1,200</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Request Form -->
+    <section class="request-section" id="request-form">
+        <div class="container">
+            <div class="request-header">
+                <h2>Request Your Custom Part</h2>
+                <p>Fill out the form below and get an instant AI-powered quote</p>
+            </div>
+
+            <div class="request-form-container">
+                <form id="printRequestForm" class="print-request-form">
+                    <!-- Vehicle Info -->
+                    <div class="form-card">
+                        <h3>📋 Vehicle Information</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Vehicle Make *</label>
+                                <select name="vehicle_make" required>
+                                    <option value="">Select make</option>
+                                    <option value="toyota">Toyota</option>
+                                    <option value="nissan">Nissan</option>
+                                    <option value="mitsubishi">Mitsubishi</option>
+                                    <option value="mazda">Mazda</option>
+                                    <option value="suzuki">Suzuki</option>
+                                    <option value="honda">Honda</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Model *</label>
+                                <input type="text" name="vehicle_model" placeholder="e.g., Corolla" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Year</label>
+                                <input type="number" name="vehicle_year" placeholder="e.g., 2015" min="1980" max="2026">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Part Details -->
+                    <div class="form-card">
+                        <h3>🔧 Part Details</h3>
+                        <div class="form-group">
+                            <label>Part Category *</label>
+                            <select name="part_category" required>
+                                <option value="">Select category</option>
+                                <option value="interior">Interior Trim & Panels</option>
+                                <option value="clips">Clips & Fasteners</option>
+                                <option value="handles">Handles, Knobs & Buttons</option>
+                                <option value="brackets">Brackets & Mounting Parts</option>
+                                <option value="custom">Custom/Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Describe the part you need *</label>
+                            <textarea name="part_description" rows="4" 
+                                      placeholder="Example: Broken cup holder in center console for 2010 Toyota Fielder. The clip that holds it in place snapped. Need exact replacement." 
+                                      required></textarea>
+                            <small class="help-text">💡 The more details you provide, the more accurate our quote will be</small>
+                        </div>
+                    </div>
+
+                    <!-- Dimensions -->
+                    <div class="form-card">
+                        <h3>📏 Dimensions (Optional)</h3>
+                        <p class="card-description">If you have measurements, they help us quote more accurately. If not, no problem - our AI will estimate!</p>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Length (mm)</label>
+                                <input type="number" name="length" placeholder="e.g., 150" step="0.1" min="5" max="300">
+                            </div>
+                            <div class="form-group">
+                                <label>Width (mm)</label>
+                                <input type="number" name="width" placeholder="e.g., 80" step="0.1" min="5" max="300">
+                            </div>
+                            <div class="form-group">
+                                <label>Height (mm)</label>
+                                <input type="number" name="height" placeholder="e.g., 30" step="0.1" min="2" max="300">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- File Upload -->
+                    <div class="form-card">
+                        <h3>📸 Photos or Files</h3>
+                        <p class="card-description">Upload photos of the part, measurements, or 3D files if you have them</p>
+                        <div class="file-upload-zone" id="fileUploadZone">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                            </svg>
+                            <p><strong>Drag & drop files here</strong> or click to browse</p>
+                            <small>Photos (JPG, PNG), 3D files (STL, OBJ), or measurements</small>
+                            <input type="file" id="fileInput" name="files" multiple accept="image/*,.stl,.obj,.step,.stp" hidden>
+                        </div>
+                        <div id="uploadedFilesList" class="uploaded-files"></div>
+                    </div>
+
+                    <!-- Material Selection -->
+                    <div class="form-card">
+                        <h3>🎨 Material Preference</h3>
+                        <div class="material-selector">
+                            <label class="material-option-selector">
+                                <input type="radio" name="material" value="ai_suggest" checked>
+                                <div class="material-option-card">
+                                    <div class="material-option-icon">🤖</div>
+                                    <strong>AI Recommendation</strong>
+                                    <small>Let our AI choose the best material for your part</small>
+                                </div>
+                            </label>
+                            <label class="material-option-selector">
+                                <input type="radio" name="material" value="pla">
+                                <div class="material-option-card">
+                                    <strong>PLA</strong>
+                                    <small>Economy • Interior parts</small>
+                                </div>
+                            </label>
+                            <label class="material-option-selector">
+                                <input type="radio" name="material" value="petg">
+                                <div class="material-option-card">
+                                    <span class="badge-mini">Recommended</span>
+                                    <strong>PETG</strong>
+                                    <small>Strong & durable</small>
+                                </div>
+                            </label>
+                            <label class="material-option-selector">
+                                <input type="radio" name="material" value="abs">
+                                <div class="material-option-card">
+                                    <strong>ABS</strong>
+                                    <small>Heat-resistant</small>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Contact Info -->
+                    <div class="form-card">
+                        <h3>📞 Contact Information</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Your Name *</label>
+                                <input type="text" name="customer_name" placeholder="John Mwangi" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Phone Number *</label>
+                                <input type="tel" name="customer_phone" placeholder="+254 712 345 678" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Email (Optional)</label>
+                                <input type="email" name="customer_email" placeholder="john@example.com">
+                            </div>
+                            <div class="form-group">
+                                <label>Location *</label>
+                                <select name="location" required>
+                                    <option value="">Select location</option>
+                                    <option value="embu">Embu</option>
+                                    <option value="garissa">Garissa</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="form-submit">
+                        <button type="submit" class="btn btn-primary btn-xl">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                            </svg>
+                            Get Instant AI Quote
+                        </button>
+                        <p class="submit-note">⚡ Our AI will analyze your request and provide a detailed quote within minutes</p>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quote Modal -->
+    <div class="modal" id="quoteModal">
+        <div class="modal-content modal-large">
+            <button class="modal-close" onclick="closeQuoteModal()">&times;</button>
+            <div id="quoteContent">
+                <!-- AI-generated quote will appear here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ -->
+    <section class="faq-section">
+        <div class="container">
+            <h2 class="section-title">Frequently Asked Questions</h2>
+            <div class="faq-grid">
+                <div class="faq-item">
+                    <h4>What parts can you 3D print?</h4>
+                    <p>We can print interior trim, clips, brackets, handles, knobs, custom mounts, and decorative parts. We CANNOT print safety-critical components like brake parts, steering components, or structural elements.</p>
+                </div>
+                <div class="faq-item">
+                    <h4>How long does it take?</h4>
+                    <p>Most parts are ready in 24-48 hours. Complex or large parts may take 2-3 days. We'll give you an exact timeframe with your quote.</p>
+                </div>
+                <div class="faq-item">
+                    <h4>How much does it cost?</h4>
+                    <p>Prices start from KSh 500 for small clips and go up based on size and material. Most parts cost 50-70% less than OEM equivalents.</p>
+                </div>
+                <div class="faq-item">
+                    <h4>What if it doesn't fit?</h4>
+                    <p>We'll work with you to get it right! Minor adjustments are free. We recommend verifying dimensions before ordering when possible.</p>
+                </div>
+                <div class="faq-item">
+                    <h4>Is it strong enough?</h4>
+                    <p>Yes! We use industrial-grade materials. PETG and ABS prints are very durable and suitable for automotive use in non-structural applications.</p>
+                </div>
+                <div class="faq-item">
+                    <h4>Do you ship nationwide?</h4>
+                    <p>Currently we serve Embu and Garissa with pickup/delivery. Shipping to other locations can be arranged for larger orders.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="container">
+            <h2>Ready to Get Your Custom Part?</h2>
+            <p>Join hundreds of satisfied customers who've saved money and time with our 3D printing service</p>
+            <button class="btn btn-primary btn-large" onclick="scrollToRequest()">Request Custom Part Now →</button>
+        </div>
+    </section>
+
+    <!-- Footer (same as main site) -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>AutoPartsKE</h4>
+                    <p>Your trusted source for car spare parts and custom 3D printed components in Eastern Kenya.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <a href="index.html">Browse Parts</a>
+                    <a href="3d-printing.html">3D Printing</a>
+                    <a href="index.html#contact">Contact Us</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Contact</h4>
+                    <p>Embu: +254 712 345 678</p>
+                    <p>Garissa: +254 723 456 789</p>
+                    <p>info@autopartske.com</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 AutoPartsKE. All rights reserved. | Pioneering 3D printing in Kenya</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="app.js"></script>
+    <script src="grokbot.js"></script>
+    <script src="3d-print-system.js"></script>
+    <script src="3d-printing-ui.js"></script>
+</body>
+</html>
