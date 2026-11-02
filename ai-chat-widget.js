@@ -471,8 +471,12 @@ let chatWidget;
 document.addEventListener('DOMContentLoaded', () => {
     // Wait for Grokbot to be available
     if (typeof GrokbotAssistant !== 'undefined') {
+        // IMPORTANT: Add your x.ai API key here to enable real Grokbot
+        // Get your API key from: https://console.x.ai/
+        const GROKBOT_API_KEY = null; // Change to 'xai-YOUR-KEY-HERE' for production
+        
         const grokbot = new GrokbotAssistant({
-            // apiKey: 'YOUR_API_KEY_HERE' // Add API key for production
+            apiKey: GROKBOT_API_KEY // Demo mode if null, real Grokbot if key provided
         });
         
         grokbot.initialize().then(() => {
