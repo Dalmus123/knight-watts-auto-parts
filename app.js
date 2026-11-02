@@ -1,3 +1,8 @@
+// Verify Three.js is loaded
+if (typeof THREE === 'undefined') {
+    console.error('Three.js library failed to load! Products will not display correctly.');
+}
+
 // Global State
 let currentLocation = localStorage.getItem('selectedLocation') || null;
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
@@ -265,7 +270,12 @@ function selectLocation(location) {
 
 // Product Rendering
 function renderProducts(filteredProducts = null) {
+    console.log('renderProducts called', filteredProducts ? `with ${filteredProducts.length} filtered products` : `with all ${products.length} products`);
     const grid = document.getElementById('productsGrid');
+    if (!grid) {
+        console.error('Products grid element not found!');
+        return;
+    }
     const productsToRender = filteredProducts || products;
     
     grid.innerHTML = productsToRender.map(product => {
@@ -320,49 +330,61 @@ function renderProducts(filteredProducts = null) {
 // 3D Preview Rendering
 function renderProductPreview(productId) {
     const canvas = document.getElementById(`preview-${productId}`);
-    if (!canvas) return;
-    
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(50, canvas.width / canvas.height, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
-    renderer.setSize(canvas.width, canvas.height);
-    
-    // Create a simple 3D representation (box with details)
-    const geometry = new THREE.BoxGeometry(1.5, 1, 0.8);
-    const material = new THREE.MeshPhongMaterial({ 
-        color: 0x00A86B,
-        shininess: 80,
-        specular: 0x111111
-    });
-    const mesh = new THREE.Mesh(geometry, material);
-    scene.add(mesh);
-    
-    // Add edges for better definition
-    const edges = new THREE.EdgesGeometry(geometry);
-    const edgeMaterial = new THREE.LineBasicMaterial({ color: 0x00D084 });
-    const edgeLines = new THREE.LineSegments(edges, edgeMaterial);
-    mesh.add(edgeLines);
-    
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-    scene.add(ambientLight);
-    
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(5, 5, 5);
-    scene.add(directionalLight);
-    
-    camera.position.z = 3;
-    
-    // Simple rotation animation
-    let rotation = 0;
-    function animate() {
-        rotation += 0.01;
-        mesh.rotation.y = rotation;
-        mesh.rotation.x = Math.sin(rotation * 0.5) * 0.2;
-        renderer.render(scene, camera);
-        requestAnimationFrame(animate);
+    if (!canvas) {
+        console.warn(`Canvas not found for product ${productId}`);
+        return;
     }
-    animate();
+    
+    if (typeof THREE === 'undefined') {
+        console.error('Three.js not available - cannot render 3D preview');
+        return;
+    }
+    
+    try {
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(50, canvas.width / canvas.height, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+        renderer.setSize(canvas.width, canvas.height);
+        
+        // Create a simple 3D representation (box with details)
+        const geometry = new THREE.BoxGeometry(1.5, 1, 0.8);
+        const material = new THREE.MeshPhongMaterial({ 
+            color: 0x00A86B,
+            shininess: 80,
+            specular: 0x111111
+        });
+        const mesh = new THREE.Mesh(geometry, material);
+        scene.add(mesh);
+        
+        // Add edges for better definition
+        const edges = new THREE.EdgesGeometry(geometry);
+        const edgeMaterial = new THREE.LineBasicMaterial({ color: 0x00D084 });
+        const edgeLines = new THREE.LineSegments(edges, edgeMaterial);
+        mesh.add(edgeLines);
+        
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(5, 5, 5);
+        scene.add(directionalLight);
+        
+        camera.position.z = 3;
+        
+        // Simple rotation animation
+        let rotation = 0;
+        function animate() {
+            rotation += 0.01;
+            mesh.rotation.y = rotation;
+            mesh.rotation.x = Math.sin(rotation * 0.5) * 0.2;
+            renderer.render(scene, camera);
+            requestAnimationFrame(animate);
+        }
+        animate();
+    } catch (error) {
+        console.error(`Error rendering 3D preview for product ${productId}:`, error);
+    }
 }
 
 // Full 3D Viewer
