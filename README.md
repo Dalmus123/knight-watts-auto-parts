@@ -1,6 +1,6 @@
-# 3D Auto Parts Kenya - E-Commerce Platform
+# Knight Watts Auto Parts - 3D E-Commerce Platform
 
-A modern, interactive 3D e-commerce website for car spare parts serving Embu and Garissa regions in Kenya.
+A modern, interactive 3D e-commerce website for car spare parts. A subsidiary of **Knight Watts Energy Solutions Limited**, bringing innovation and quality to Embu and Garissa regions in Kenya.
 
 ## Features
 
@@ -141,7 +141,7 @@ Edit the `products` array in `app.js`:
 ### Changing Contact Information
 
 Update in `index.html`:
-- Phone numbers (search for `+254 712 345 678`)
+- Phone numbers (search for `+254 714 243 345`)
 - Email address (search for `info@autopartske.com`)
 - Physical addresses in the Locations section
 
@@ -281,14 +281,14 @@ Recommended tools:
 
 ## License
 
-Proprietary - AutoPartsKE 2026
+Proprietary - Knight Watts Auto Parts 2024-2026. A Subsidiary of Knight Watts Energy Solutions Limited.
 
 ## Contact
 
 For technical support or business inquiries:
 - Email: dev@autopartske.com
-- Phone: +254 712 345 678 (Embu) | +254 723 456 789 (Garissa)
-- WhatsApp: +254 712 345 678
+- Phone: +254 714 243 345 (Embu & Garissa)
+- WhatsApp: +254 714 243 345
 
 ---
 

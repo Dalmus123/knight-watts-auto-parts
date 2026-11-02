@@ -1,5 +1,5 @@
 /**
- * Grokbot AI Assistant for AutoPartsKE
+ * Grokbot AI Assistant for Knight Watts Auto Parts
  * Provides intelligent customer support, product recommendations, and automation
  */
 
@@ -13,7 +13,7 @@ class GrokbotAssistant {
         this.maxHistoryLength = 20;
         this.isDemo = !this.apiKey; // Demo mode if no API key
         
-        this.systemPrompt = `You are an AI assistant for AutoPartsKE, a car spare parts e-commerce business in Kenya with branches in Embu and Garissa.
+        this.systemPrompt = `You are an AI assistant for Knight Watts Auto Parts, a subsidiary of Knight Watts Energy Solutions Limited. We're an innovative car spare parts business in Kenya with locations in Embu and Garissa.
 
 Your role and capabilities:
 1. Help customers find the right car parts for their vehicles
@@ -27,7 +27,7 @@ Business information:
 - Locations: Embu (1,200+ parts in stock) and Garissa (800+ parts in stock)
 - Payment methods: M-Pesa, Bank Transfer, Cash on Delivery
 - Delivery: 1-2 days within town, 2-3 days inter-city
-- Phone: +254 712 345 678 (Embu), +254 723 456 789 (Garissa)
+- Phone: +254 714 243 345 (Embu & Garissa)
 - Operating hours: Mon-Sat 8AM-6PM
 
 Common Kenyan vehicle makes: Toyota, Nissan, Mitsubishi, Mazda, Suzuki, Honda
@@ -163,7 +163,7 @@ Never:
         
         // Swahili greetings
         if (msgLower.match(/habari|mambo|niaje|sasa/)) {
-            return "Habari! 👋 Karibu AutoPartsKE. Ninaweza kukusaidia vipi leo? I can help you find car parts, check prices, or answer questions about your vehicle.";
+            return "Habari! 👋 Karibu Knight Watts Auto Parts. Ninaweza kukusaidia vipi leo? I can help you find car parts, check prices, or answer questions about your vehicle.";
         }
 
         // Product search
@@ -231,11 +231,11 @@ Never:
                    "**Embu Branch**\n" +
                    "Moi Avenue, Embu Town\n" +
                    "Next to Embu Level 5 Hospital\n" +
-                   "📞 +254 712 345 678\n\n" +
+                   "📞 +254 714 243 345\n\n" +
                    "**Garissa Branch**\n" +
                    "Garissa Town Center\n" +
                    "Opposite County Government Offices\n" +
-                   "📞 +254 723 456 789\n\n" +
+                   "📞 +254 714 243 345\n\n" +
                    "Open Mon-Sat: 8AM-6PM";
         }
 
@@ -270,7 +270,7 @@ Never:
 
         // Thank you
         if (msgLower.match(/thank|asante|shukran/)) {
-            return "Karibu sana! 😊 Happy to help. Feel free to ask anything else or call us at +254 712 345 678. Drive safe!";
+            return "Karibu sana! 😊 Happy to help. Feel free to ask anything else or call us at +254 714 243 345. Drive safe!";
         }
 
         // Default intelligent response

@@ -445,7 +445,7 @@ Create `car-spares/3d-print-request.html`:
 
         <!-- Why 3D Print with Us -->
         <div class="printing-benefits">
-            <h3>Why Print with AutoPartsKE?</h3>
+            <h3>Why Print with Knight Watts Auto Parts?</h3>
             <div class="benefits-grid">
                 <div class="benefit">
                     <div class="benefit-icon">⚡</div>

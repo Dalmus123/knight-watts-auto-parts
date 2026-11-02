@@ -375,7 +375,7 @@ function displayQuote(quote) {
 
             <!-- Contact Info -->
             <div class="quote-footer">
-                <p>Questions? Call us at <strong>+254 712 345 678 (Embu)</strong> or <strong>+254 723 456 789 (Garissa)</strong></p>
+                <p>Questions? Call us at <strong>+254 714 243 345</strong> (Embu & Garissa)</p>
                 <p class="quote-validity">This quote is valid for 7 days</p>
             </div>
         </div>

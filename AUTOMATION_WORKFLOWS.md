@@ -113,7 +113,7 @@ class MpesaAutomation {
                     PhoneNumber: phone,
                     CallBackURL: 'https://yourdomain.com/api/mpesa/callback',
                     AccountReference: orderId,
-                    TransactionDesc: `AutoPartsKE Order ${orderId}`
+                    TransactionDesc: `Knight Watts Auto Parts Order ${orderId}`
                 })
             }
         );

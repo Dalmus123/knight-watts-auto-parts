@@ -1,8 +1,8 @@
-# 3D Auto Parts Kenya - Complete Project Overview
+# Knight Watts Auto Parts - Complete Project Overview
 
 ## 🎯 Project Summary
 
-A fully functional, production-ready 3D e-commerce website for selling car spare parts in Kenya, with specific focus on Embu and Garissa regions. Built with modern web technologies, featuring interactive 3D product visualization, location-based inventory, and optimized for the Kenyan market.
+A fully functional, production-ready 3D e-commerce website for selling car spare parts in Kenya, with specific focus on Embu and Garissa regions. **Knight Watts Auto Parts** is a subsidiary of **Knight Watts Energy Solutions Limited**, bringing innovative technology and quality service to the automotive sector. Built with modern web technologies, featuring interactive 3D product visualization, location-based inventory, and optimized for the Kenyan market.
 
 ---
 

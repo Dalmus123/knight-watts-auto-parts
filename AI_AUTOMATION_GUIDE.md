@@ -122,7 +122,7 @@ class GrokbotAssistant {
 
     async initialize() {
         // Initialize Grokbot with business context
-        this.systemPrompt = `You are an AI assistant for AutoPartsKE, 
+        this.systemPrompt = `You are an AI assistant for Knight Watts Auto Parts, 
         a car spare parts business in Kenya with branches in Embu and Garissa.
         
         Your role:
@@ -236,7 +236,7 @@ class GrokbotAssistant {
             'delivery': 'We deliver to both Embu and Garissa. Delivery takes 1-2 days within town, 2-3 days inter-city.',
             'stock': 'I can check stock availability. Please specify the part and your location (Embu or Garissa).',
             'payment': 'We accept M-Pesa, bank transfer, and cash on delivery. M-Pesa is fastest!',
-            'default': 'Thank you for your message. One of our team members will assist you shortly. You can also call us at +254 712 345 678.'
+            'default': 'Thank you for your message. One of our team members will assist you shortly. You can also call us at +254 714 243 345.'
         };
 
         for (const [key, response] of Object.entries(fallbacks)) {
@@ -284,7 +284,7 @@ For more advanced automation, use Cursor Agent SDK:
 import { defineAgent } from '@cursor/agent-sdk';
 
 export default defineAgent({
-    name: 'AutoPartsKE Assistant',
+    name: 'Knight Watts Auto Parts Assistant',
     description: 'AI assistant for car spare parts business in Kenya',
     
     async chat({ message, context, tools }) {
@@ -294,7 +294,7 @@ export default defineAgent({
             messages: [
                 {
                     role: 'system',
-                    content: `You're helping customers of AutoPartsKE find car parts.
+                    content: `You're helping customers of Knight Watts Auto Parts find car parts.
                     Available locations: Embu, Garissa.
                     Payment: M-Pesa, Cash on Delivery.`
                 },
@@ -693,14 +693,14 @@ class SMSAutomation {
     }
     
     async sendOrderConfirmation(phone, order) {
-        const message = `AutoPartsKE: Order ${order.id} confirmed! ` +
+        const message = `Knight Watts Auto Parts: Order ${order.id} confirmed! ` +
                        `Total: KSh ${order.total}. ` +
                        `Delivery in 1-2 days. Track: autopartske.co.ke/track/${order.id}`;
         
         await this.sms.send({
             to: [phone],
             message,
-            from: 'AutoPartsKE'
+            from: 'Knight Watts'
         });
     }
     
@@ -708,13 +708,13 @@ class SMSAutomation {
         const messages = {
             dispatched: 'Your order has been dispatched. Arriving soon!',
             out_for_delivery: 'Driver is on the way. ETA: 30 minutes.',
-            delivered: 'Order delivered! Thank you for choosing AutoPartsKE.'
+            delivered: 'Order delivered! Thank you for choosing Knight Watts Auto Parts.'
         };
         
         await this.sms.send({
             to: [phone],
             message: messages[status],
-            from: 'AutoPartsKE'
+            from: 'Knight Watts'
         });
     }
     
@@ -727,8 +727,8 @@ class SMSAutomation {
         
         await this.sms.send({
             to: [phone],
-            message: `AutoPartsKE: ${recommendations}`,
-            from: 'AutoPartsKE'
+            message: `Knight Watts Auto Parts: ${recommendations}`,
+            from: 'Knight Watts'
         });
     }
 }

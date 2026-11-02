@@ -110,7 +110,7 @@ That's it! The website is now running locally.
 
 ### Change Your Contact Info
 1. Open `index.html`
-2. Search for `+254 712 345 678`
+2. Search for `+254 714 243 345`
 3. Replace with your phone numbers
 4. Search for `info@autopartske.com`
 5. Replace with your email

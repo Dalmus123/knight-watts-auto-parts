@@ -1,8 +1,8 @@
-# Kenya Deployment Guide - 3D Auto Parts Website
+# Kenya Deployment Guide - Knight Watts Auto Parts
 
 ## Starting Your Online Auto Parts Business in Embu or Garissa
 
-This guide will help you launch your 3D car spare parts e-commerce platform in Kenya, specifically tailored for Embu and Garissa markets.
+This guide will help you launch your Knight Watts Auto Parts 3D e-commerce platform in Kenya, specifically tailored for Embu and Garissa markets. Knight Watts Auto Parts is a subsidiary of Knight Watts Energy Solutions Limited, bringing innovation to the automotive sector.
 
 ## Business Registration (Essential First Steps)
 
