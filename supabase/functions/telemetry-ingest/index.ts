@@ -174,73 +174,41 @@ serve(async (req) => {
   }
 });
 
-// Rate limiting check
+// Rate limiting check using SECURITY DEFINER function
 async function checkRateLimit(
   supabase: any,
   endpoint: string,
   ip: string
 ): Promise<{ allowed: boolean; retry_after_ms?: number }> {
-  const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
-
-  // Get recent requests from this IP
-  const { data, error } = await supabase
-    .from("rate_limit_log")
-    .select("request_count, window_start")
-    .eq("endpoint", endpoint)
-    .eq("ip_address", ip)
-    .gte("window_start", windowStart)
-    .order("window_start", { ascending: false })
-    .limit(1)
-    .single();
-
-  if (error && error.code !== "PGRST116") {
-    // Error other than "not found" - allow request but log
-    console.error("Rate limit check error:", error);
-    return { allowed: true };
-  }
-
-  if (!data) {
-    // First request in this window
-    await supabase.from("rate_limit_log").insert({
-      endpoint,
-      ip_address: ip,
-      request_count: 1,
-      window_start: new Date().toISOString(),
+  try {
+    // Call the SECURITY DEFINER function which bypasses RLS
+    const { data, error } = await supabase.rpc('check_rate_limit', {
+      p_endpoint: endpoint,
+      p_ip_address: ip,
+      p_max_requests: RATE_LIMIT_MAX_REQUESTS,
+      p_window_seconds: Math.floor(RATE_LIMIT_WINDOW_MS / 1000)
     });
+
+    if (error) {
+      console.error("Rate limit check error:", error);
+      // On error, allow the request but log it
+      return { allowed: true };
+    }
+
+    if (data === false) {
+      // Rate limit exceeded
+      return {
+        allowed: false,
+        retry_after_ms: RATE_LIMIT_WINDOW_MS,
+      };
+    }
+
+    return { allowed: true };
+  } catch (error) {
+    console.error("Rate limit function error:", error);
+    // On error, allow the request
     return { allowed: true };
   }
-
-  // Check if we're still in the same window
-  const windowAge = Date.now() - new Date(data.window_start).getTime();
-  
-  if (windowAge >= RATE_LIMIT_WINDOW_MS) {
-    // New window
-    await supabase.from("rate_limit_log").insert({
-      endpoint,
-      ip_address: ip,
-      request_count: 1,
-      window_start: new Date().toISOString(),
-    });
-    return { allowed: true };
-  }
-
-  // Same window - check limit
-  if (data.request_count >= RATE_LIMIT_MAX_REQUESTS) {
-    return {
-      allowed: false,
-      retry_after_ms: RATE_LIMIT_WINDOW_MS - windowAge,
-    };
-  }
-
-  // Increment counter
-  await supabase
-    .from("rate_limit_log")
-    .update({ request_count: data.request_count + 1 })
-    .eq("endpoint", endpoint)
-    .eq("ip_address", ip)
-    .eq("window_start", data.window_start);
-
-  return { allowed: true };
 }
 
 // Validate telemetry event

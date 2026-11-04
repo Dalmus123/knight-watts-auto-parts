@@ -9,11 +9,11 @@
  */
 
 const supabaseConfig = {
-  // Replace with your Supabase project URL
-  url: process.env.SUPABASE_URL || 'YOUR_SUPABASE_URL_HERE',
+  // Supabase project URL
+  url: 'https://selvxrprxbkznxtfesxe.supabase.co',
   
-  // Replace with your Supabase anon/public key (safe for client-side)
-  anonKey: process.env.SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY_HERE',
+  // Supabase anon/public key (safe for client-side use)
+  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlbHZ4cnByeGJrem54dGZlc3hlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM4MDExNTYsImV4cCI6MjEwOTM3NzE1Nn0.c5uB-kHqw0UbWlYF6OlcvZumm7q2KaOF4iHKUPoxiT4',
   
   // Storage bucket names
   buckets: {
@@ -37,8 +37,10 @@ function initSupabase() {
 
 // Check if config is set up
 function isConfigured() {
-  return supabaseConfig.url !== 'YOUR_SUPABASE_URL_HERE' && 
-         supabaseConfig.anonKey !== 'YOUR_SUPABASE_ANON_KEY_HERE';
+  return supabaseConfig.url && 
+         supabaseConfig.url.includes('supabase.co') &&
+         supabaseConfig.anonKey && 
+         supabaseConfig.anonKey.length > 20;
 }
 
 // Export for use in other modules
