@@ -1,0 +1,77 @@
+/**
+ * Knight Watts Auto Parts - Monochrome Theme
+ * 
+ * This file defines the centralized color palette for the entire website.
+ * All pages and components should reference these CSS variables.
+ * 
+ * Color Palette: Light grey → Deep grey/charcoal → Near-black + Off-white
+ * Different sections use different grey depths for visual distinction.
+ */
+
+:root {
+    /* Greyscale Palette - from light to dark */
+    --grey-50: #F8F9FA;          /* Off-white - lightest backgrounds, cards */
+    --grey-100: #E9ECEF;         /* Very light grey - subtle backgrounds */
+    --grey-200: #DEE2E6;         /* Light grey - hero sections, dividers */
+    --grey-300: #CED4DA;         /* Mid-light grey - borders, inactive states */
+    --grey-400: #ADB5BD;         /* Mid grey - muted text, icons */
+    --grey-500: #6C757D;         /* Neutral grey - secondary text */
+    --grey-600: #495057;         /* Mid-dark grey - body text */
+    --grey-700: #343A40;         /* Dark grey - headings, important text */
+    --grey-800: #212529;         /* Deep grey/charcoal - dark sections */
+    --grey-900: #0A0C0E;         /* Near-black - footer, darkest elements */
+
+    /* Semantic Color Assignments */
+    /* Backgrounds - Different depths for visual distinction */
+    --bg-lightest: var(--grey-50);       /* Off-white cards, inputs */
+    --bg-light: var(--grey-100);         /* Light sections */
+    --bg-hero: var(--grey-200);          /* Hero section background */
+    --bg-mid: var(--grey-300);           /* Mid-tone sections */
+    --bg-dark: var(--grey-800);          /* Dark sections, main background */
+    --bg-darker: var(--grey-900);        /* Footer, darkest sections */
+    
+    /* Cards & Components */
+    --card-bg: var(--grey-700);          /* Card backgrounds */
+    --card-hover: var(--grey-600);       /* Card hover state */
+    --card-border: var(--grey-600);      /* Card borders */
+    
+    /* Text Colors - WCAG AA compliant contrast */
+    --text-primary: var(--grey-50);      /* Primary text on dark backgrounds */
+    --text-secondary: var(--grey-400);   /* Secondary text, less emphasis */
+    --text-muted: var(--grey-500);       /* Muted text, hints */
+    --text-dark: var(--grey-800);        /* Text on light backgrounds */
+    --text-heading: var(--grey-50);      /* Headings on dark backgrounds */
+    
+    /* Borders & Dividers */
+    --border-light: var(--grey-600);     /* Borders on dark backgrounds */
+    --border-mid: var(--grey-500);       /* Mid-tone borders */
+    --border-dark: var(--grey-700);      /* Subtle borders */
+    
+    /* Interactive Elements */
+    --interactive-default: var(--grey-300);  /* Default button/link color */
+    --interactive-hover: var(--grey-200);    /* Hover state */
+    --interactive-active: var(--grey-400);   /* Active/pressed state */
+    
+    /* States - Only focus/error maintain color for accessibility */
+    --focus-ring: #4A9EFF;               /* Blue focus ring for accessibility */
+    --error: #EF4444;                    /* Red for errors - accessibility exception */
+    --success: var(--grey-400);          /* Success messages in grey */
+    --warning: var(--grey-500);          /* Warnings in grey */
+    
+    /* Shadows - Subtle depth using grey/black */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.4);
+    --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.5);
+    
+    /* Overlays */
+    --overlay: rgba(0, 0, 0, 0.7);       /* Modal/dropdown overlays */
+    --overlay-light: rgba(255, 255, 255, 0.1);  /* Light overlays on dark */
+}
+
+/* Dark theme is default - no changes needed */
+
+/* Optional: Light mode (if ever needed in the future) */
+@media (prefers-color-scheme: light) {
+    /* Currently, dark theme is the brand standard - light mode not implemented */
+}
