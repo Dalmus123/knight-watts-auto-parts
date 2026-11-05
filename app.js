@@ -234,9 +234,114 @@ const products = [
     }
 ];
 
+// Load products from Supabase backend
+async function loadProductsFromBackend() {
+    try {
+        // Check if backend integration is available
+        if (typeof window.backendIntegration === 'undefined' || !window.backendIntegration.isEnabled()) {
+            console.log('Backend not available - using hardcoded products');
+            return;
+        }
+        
+        // Fetch active products from Supabase
+        const result = await window.backendIntegration.getProducts();
+        
+        if (!result.success || !result.products || result.products.length === 0) {
+            console.log('No products from backend - using hardcoded products');
+            return;
+        }
+        
+        console.log(`Loaded ${result.products.length} products from Supabase`);
+        
+        // Map Supabase products to expected format
+        const mappedProducts = result.products.map(dbProduct => {
+            // Create locations object based on single location field
+            const locations = {
+                embu: { 
+                    stock: dbProduct.location.toLowerCase() === 'embu' ? dbProduct.stock_quantity : 0, 
+                    available: dbProduct.location.toLowerCase() === 'embu' && dbProduct.stock_quantity > 0 
+                },
+                garissa: { 
+                    stock: dbProduct.location.toLowerCase() === 'garissa' ? dbProduct.stock_quantity : 0, 
+                    available: dbProduct.location.toLowerCase() === 'garissa' && dbProduct.stock_quantity > 0 
+                }
+            };
+            
+            // If location is "both" or similar, distribute stock
+            if (!['embu', 'garissa'].includes(dbProduct.location.toLowerCase())) {
+                const halfStock = Math.floor(dbProduct.stock_quantity / 2);
+                locations.embu = { stock: halfStock, available: halfStock > 0 };
+                locations.garissa = { stock: halfStock, available: halfStock > 0 };
+            }
+            
+            // Build specs object from available fields
+            const specs = {};
+            if (dbProduct.manufacturer) specs['Manufacturer'] = dbProduct.manufacturer;
+            if (dbProduct.part_number) specs['Part Number'] = dbProduct.part_number;
+            if (dbProduct.sku) specs['SKU'] = dbProduct.sku;
+            specs['Category'] = dbProduct.category || 'General';
+            
+            return {
+                id: dbProduct.id,
+                name: dbProduct.name,
+                category: normalizeCategoryForFilter(dbProduct.category),
+                make: extractMakeFromName(dbProduct.name) || 'universal',
+                price: dbProduct.price_kes,
+                description: dbProduct.description || 'Quality auto part for your vehicle.',
+                locations: locations,
+                specs: specs,
+                imageUrl: dbProduct.image_url || null,
+                featured: dbProduct.featured || false
+            };
+        });
+        
+        // Replace products array with mapped products
+        products.length = 0;
+        products.push(...mappedProducts);
+        
+        console.log('Products loaded and mapped successfully');
+    } catch (error) {
+        console.error('Error loading products from backend:', error);
+        console.log('Falling back to hardcoded products');
+    }
+}
+
+// Helper function to normalize category for filtering
+function normalizeCategoryForFilter(category) {
+    if (!category) return 'engine';
+    
+    const normalized = category.toLowerCase();
+    
+    // Map common category names to filter values
+    if (normalized.includes('brake') || normalized.includes('suspension')) return 'brakes';
+    if (normalized.includes('filter') || normalized.includes('fluid') || normalized.includes('oil')) return 'filters';
+    if (normalized.includes('electric') || normalized.includes('battery') || normalized.includes('alternator')) return 'electrical';
+    if (normalized.includes('body') || normalized.includes('bumper') || normalized.includes('mirror')) return 'body';
+    if (normalized.includes('engine') || normalized.includes('timing') || normalized.includes('spark')) return 'engine';
+    
+    return 'engine'; // Default
+}
+
+// Helper function to extract vehicle make from product name
+function extractMakeFromName(name) {
+    if (!name) return null;
+    
+    const nameLower = name.toLowerCase();
+    const makes = ['toyota', 'nissan', 'mitsubishi', 'mazda', 'suzuki', 'honda'];
+    
+    for (const make of makes) {
+        if (nameLower.includes(make)) {
+            return make;
+        }
+    }
+    
+    return null;
+}
+
 // Initialize app
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     initializeLocation();
+    await loadProductsFromBackend();
     renderProducts();
     attachEventListeners();
     updateCartDisplay();
@@ -288,17 +393,25 @@ function renderProducts(filteredProducts = null) {
         const stockText = !locationStock.available ? 'Out of Stock' : 
                          locationStock.stock < 5 ? `Low Stock (${locationStock.stock})` : 'In Stock';
         
+        // Determine if we have an image or should use 3D
+        const hasImage = product.imageUrl && product.imageUrl.trim() !== '';
+        const imageContent = hasImage 
+            ? `<img src="${product.imageUrl}" alt="${product.name}" style="width: 100%; height: 220px; object-fit: cover;" onerror="this.style.display='none'; document.getElementById('preview-${product.id}').style.display='block';">`
+            : '';
+        const canvasDisplay = hasImage ? 'style="display: none;"' : '';
+        
         return `
             <div class="product-card" onclick="openProductViewer(${product.id})">
                 <div class="product-image">
-                    <canvas id="preview-${product.id}" width="280" height="220"></canvas>
+                    ${imageContent}
+                    <canvas id="preview-${product.id}" width="280" height="220" ${canvasDisplay}></canvas>
                     <div class="view-3d-badge">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
                             <path d="M2 17l10 5 10-5"></path>
                             <path d="M2 12l10 5 10-5"></path>
                         </svg>
-                        View in 3D
+                        ${hasImage ? 'View Details' : 'View in 3D'}
                     </div>
                 </div>
                 <div class="product-info">
@@ -321,9 +434,11 @@ function renderProducts(filteredProducts = null) {
         `;
     }).join('');
     
-    // Initialize 3D previews for each product
+    // Initialize 3D previews for each product (only if no image)
     productsToRender.forEach(product => {
-        setTimeout(() => renderProductPreview(product.id), 100);
+        if (!product.imageUrl || product.imageUrl.trim() === '') {
+            setTimeout(() => renderProductPreview(product.id), 100);
+        }
     });
 }
 
