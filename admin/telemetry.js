@@ -97,7 +97,7 @@ async function refreshTelemetryView() {
         // Get recent telemetry events (last 24 hours)
         const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
         
-        const { data: events, error } = await supabase
+        const { data: events, error } = await supabaseClient
             .from('telemetry_events')
             .select(`
                 *,
@@ -194,7 +194,7 @@ function renderTelemetryEvents(events) {
 
 async function loadActiveAlerts() {
     try {
-        const { data: alerts, error } = await supabase
+        const { data: alerts, error } = await supabaseClient
             .from('telemetry_events')
             .select(`
                 *,
@@ -256,11 +256,11 @@ function renderAlerts(alerts) {
 function subscribeToTelemetry() {
     // Unsubscribe from previous subscription if exists
     if (telemetrySubscription) {
-        supabase.removeChannel(telemetrySubscription);
+        supabaseClient.removeChannel(telemetrySubscription);
     }
     
     // Subscribe to new telemetry events
-    telemetrySubscription = supabase
+    telemetrySubscription = supabaseClient
         .channel('telemetry_realtime')
         .on(
             'postgres_changes',
@@ -380,7 +380,7 @@ function showNotification(title, message) {
 // Cleanup on page unload
 window.addEventListener('beforeunload', () => {
     if (telemetrySubscription) {
-        supabase.removeChannel(telemetrySubscription);
+        supabaseClient.removeChannel(telemetrySubscription);
     }
 });
 

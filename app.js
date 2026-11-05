@@ -9,7 +9,6 @@ let cart = JSON.parse(localStorage.getItem('cart')) || [];
 let scene, camera, renderer, currentMesh;
 let selectedProduct = null;
 let supabaseClient = null;
-let productsFromDB = [];
 
 // Product Database - Sample car spare parts (fallback)
 const products = [
@@ -236,59 +235,148 @@ const products = [
     }
 ];
 
+// Initialize Supabase client for image URL generation
+async function initializeSupabase() {
+    if (typeof initSupabase === 'function' && typeof isConfigured === 'function' && isConfigured()) {
+        supabaseClient = initSupabase();
+        console.log('Supabase client initialized for image URLs');
+    }
+}
+
+// Helper function to get Storage public URL for images
+function getProductImageUrl(imagePath) {
+    if (!imagePath || !supabaseClient) return null;
+    try {
+        const { data } = supabaseClient.storage
+            .from('products')
+            .getPublicUrl(imagePath);
+        return data?.publicUrl || null;
+    } catch (error) {
+        console.error('Error generating image URL:', error);
+        return null;
+    }
+}
+
+// Load products from backend (PR #9's approach, enhanced with image URL generation)
+async function loadProductsFromBackend() {
+    try {
+        // Check if backend integration is available
+        if (typeof window.backendIntegration === 'undefined' || !window.backendIntegration.isEnabled()) {
+            console.log('Backend not available - using hardcoded products');
+            return;
+        }
+        
+        // Fetch active products from Supabase
+        const result = await window.backendIntegration.getProducts();
+        
+        if (!result.success || !result.products || result.products.length === 0) {
+            console.log('No products from backend - using hardcoded products');
+            return;
+        }
+        
+        console.log(`Loaded ${result.products.length} products from Supabase`);
+        
+        // Map Supabase products to expected format
+        const mappedProducts = result.products.map(dbProduct => {
+            // Create locations object based on single location field
+            const locations = {
+                embu: { 
+                    stock: dbProduct.location.toLowerCase() === 'embu' ? dbProduct.stock_quantity : 0, 
+                    available: dbProduct.location.toLowerCase() === 'embu' && dbProduct.stock_quantity > 0 
+                },
+                garissa: { 
+                    stock: dbProduct.location.toLowerCase() === 'garissa' ? dbProduct.stock_quantity : 0, 
+                    available: dbProduct.location.toLowerCase() === 'garissa' && dbProduct.stock_quantity > 0 
+                }
+            };
+            
+            // If location is "both" or similar, distribute stock
+            if (!['embu', 'garissa'].includes(dbProduct.location.toLowerCase())) {
+                const halfStock = Math.floor(dbProduct.stock_quantity / 2);
+                locations.embu = { stock: halfStock, available: halfStock > 0 };
+                locations.garissa = { stock: halfStock, available: halfStock > 0 };
+            }
+            
+            // Build specs object from available fields
+            const specs = {};
+            if (dbProduct.manufacturer) specs['Manufacturer'] = dbProduct.manufacturer;
+            if (dbProduct.part_number) specs['Part Number'] = dbProduct.part_number;
+            if (dbProduct.sku) specs['SKU'] = dbProduct.sku;
+            specs['Category'] = dbProduct.category || 'General';
+            
+            // Generate proper image URL from primary_image_path using Storage
+            let imageUrl = null;
+            if (dbProduct.primary_image_path) {
+                imageUrl = getProductImageUrl(dbProduct.primary_image_path);
+            }
+            
+            return {
+                id: dbProduct.id,
+                name: dbProduct.name,
+                category: normalizeCategoryForFilter(dbProduct.category),
+                make: extractMakeFromName(dbProduct.name) || 'universal',
+                price: dbProduct.price_kes,
+                description: dbProduct.description || 'Quality auto part for your vehicle.',
+                locations: locations,
+                specs: specs,
+                imageUrl: imageUrl,
+                featured: dbProduct.featured || false
+            };
+        });
+        
+        // Replace products array with mapped products
+        products.length = 0;
+        products.push(...mappedProducts);
+        
+        console.log('Products loaded and mapped successfully');
+    } catch (error) {
+        console.error('Error loading products from backend:', error);
+        console.log('Falling back to hardcoded products');
+    }
+}
+
+// Helper function to normalize category for filtering
+function normalizeCategoryForFilter(category) {
+    if (!category) return 'engine';
+    
+    const normalized = category.toLowerCase();
+    
+    // Map common category names to filter values
+    if (normalized.includes('brake') || normalized.includes('suspension')) return 'brakes';
+    if (normalized.includes('filter') || normalized.includes('fluid') || normalized.includes('oil')) return 'filters';
+    if (normalized.includes('electric') || normalized.includes('battery') || normalized.includes('alternator')) return 'electrical';
+    if (normalized.includes('body') || normalized.includes('bumper') || normalized.includes('mirror')) return 'body';
+    if (normalized.includes('engine') || normalized.includes('timing') || normalized.includes('spark')) return 'engine';
+    
+    return 'engine'; // Default
+}
+
+// Helper function to extract vehicle make from product name
+function extractMakeFromName(name) {
+    if (!name) return null;
+    
+    const nameLower = name.toLowerCase();
+    const makes = ['toyota', 'nissan', 'mitsubishi', 'mazda', 'suzuki', 'honda'];
+    
+    for (const make of makes) {
+        if (nameLower.includes(make)) {
+            return make;
+        }
+    }
+    
+    return null;
+}
+
 // Initialize app
 document.addEventListener('DOMContentLoaded', async () => {
-    await initializeSupabase();
+    await initializeSupabase(); // Initialize Supabase for image URLs
     initializeLocation();
-    await loadProductsFromDB();
+    await loadProductsFromBackend(); // Load products using PR #9's approach
     renderProducts();
     attachEventListeners();
     updateCartDisplay();
     initNavigation();
 });
-
-// Initialize Supabase
-async function initializeSupabase() {
-    if (typeof initSupabase === 'function' && typeof isConfigured === 'function' && isConfigured()) {
-        supabaseClient = initSupabase();
-        console.log('Supabase initialized for storefront');
-    } else {
-        console.log('Supabase not configured - using sample products');
-    }
-}
-
-// Load products from Supabase
-async function loadProductsFromDB() {
-    if (!supabaseClient) {
-        console.log('Using fallback sample products');
-        return;
-    }
-    
-    try {
-        const { data, error } = await supabaseClient
-            .from('products')
-            .select('*')
-            .eq('is_active', true)
-            .order('featured', { ascending: false });
-        
-        if (error) throw error;
-        
-        if (data && data.length > 0) {
-            productsFromDB = data;
-            console.log(`Loaded ${data.length} products from database`);
-        }
-    } catch (error) {
-        console.error('Error loading products from database:', error);
-    }
-}
-
-function getProductImageUrl(imagePath) {
-    if (!imagePath || !supabaseClient) return null;
-    const { data } = supabaseClient.storage
-        .from('products')
-        .getPublicUrl(imagePath);
-    return data?.publicUrl || null;
-}
 
 // Location Management
 function initializeLocation() {
@@ -317,52 +405,38 @@ function selectLocation(location) {
 
 // Product Rendering
 function renderProducts(filteredProducts = null) {
-    const allProducts = productsFromDB.length > 0 ? productsFromDB : products;
-    console.log('renderProducts called', filteredProducts ? `with ${filteredProducts.length} filtered products` : `with all ${allProducts.length} products`);
+    console.log('renderProducts called', filteredProducts ? `with ${filteredProducts.length} filtered products` : `with all ${products.length} products`);
     const grid = document.getElementById('productsGrid');
     if (!grid) {
         console.error('Products grid element not found!');
         return;
     }
-    const productsToRender = filteredProducts || allProducts;
+    const productsToRender = filteredProducts || products;
     
     grid.innerHTML = productsToRender.map(product => {
-        // Handle both DB products and sample products
-        const isDBProduct = product.price_kes !== undefined;
-        const price = isDBProduct ? product.price_kes : product.price;
-        const stockQty = isDBProduct ? product.stock_quantity : null;
+        const locationStock = currentLocation ? 
+            product.locations[currentLocation] : 
+            { stock: Math.max(product.locations.embu.stock, product.locations.garissa.stock), available: true };
+        
+        const stockStatus = !locationStock.available ? 'out-of-stock' : 
+                           locationStock.stock < 5 ? 'low-stock' : 'in-stock';
+        const stockText = !locationStock.available ? 'Out of Stock' : 
+                         locationStock.stock < 5 ? `Low Stock (${locationStock.stock})` : 'In Stock';
+        
         const description = product.description || 'Quality auto part';
         
-        let locationStock, stockStatus, stockText;
-        
-        if (isDBProduct) {
-            // Database product - simpler stock check
-            const inStock = stockQty > 0;
-            stockStatus = !inStock ? 'out-of-stock' : stockQty < 5 ? 'low-stock' : 'in-stock';
-            stockText = !inStock ? 'Out of Stock' : stockQty < 5 ? `Low Stock (${stockQty})` : 'In Stock';
-        } else {
-            // Sample product with locations
-            locationStock = currentLocation ? 
-                product.locations[currentLocation] : 
-                { stock: Math.max(product.locations.embu.stock, product.locations.garissa.stock), available: true };
-            
-            stockStatus = !locationStock.available ? 'out-of-stock' : 
-                           locationStock.stock < 5 ? 'low-stock' : 'in-stock';
-            stockText = !locationStock.available ? 'Out of Stock' : 
-                         locationStock.stock < 5 ? `Low Stock (${locationStock.stock})` : 'In Stock';
-        }
-        
-        const imageUrl = isDBProduct && product.primary_image_path ? 
-            getProductImageUrl(product.primary_image_path) : null;
+        // Determine if we have an image or should use 3D preview
+        const hasImage = product.imageUrl && product.imageUrl.trim() !== '';
         
         return `
-            <div class="product-card" onclick="openProductViewer('${product.id}')" data-product-id="${product.id}">
-                <div class="product-image product-image-3d" data-image-id="${product.id}">
-                    ${imageUrl ? 
+            <div class="product-card" onclick="openProductViewer('${product.id}')" ${hasImage ? 'data-product-id="' + product.id + '"' : ''}>
+                <div class="product-image ${hasImage ? 'product-image-3d' : ''}" ${hasImage ? 'data-image-id="' + product.id + '"' : ''}>
+                    ${hasImage ? 
                         `<div class="product-3d-wrapper">
-                            <img src="${imageUrl}" alt="${product.name}" class="product-2d-image" />
+                            <img src="${product.imageUrl}" alt="${product.name}" class="product-2d-image" onerror="this.style.display='none'; this.parentElement.parentElement.querySelector('canvas').style.display='block';" />
                             <div class="product-3d-overlay"></div>
-                        </div>` :
+                        </div>
+                        <canvas id="preview-${product.id}" width="280" height="220" style="display: none;"></canvas>` :
                         `<canvas id="preview-${product.id}" width="280" height="220"></canvas>`
                     }
                     <div class="view-3d-badge">
@@ -371,7 +445,7 @@ function renderProducts(filteredProducts = null) {
                             <path d="M2 17l10 5 10-5"></path>
                             <path d="M2 12l10 5 10-5"></path>
                         </svg>
-                        ${imageUrl ? 'Interactive View' : 'View in 3D'}
+                        ${hasImage ? 'Interactive View' : 'View in 3D'}
                     </div>
                 </div>
                 <div class="product-info">
@@ -379,13 +453,13 @@ function renderProducts(filteredProducts = null) {
                     <h3 class="product-name">${product.name}</h3>
                     <p class="product-description">${description.substring(0, 80)}...</p>
                     <div class="product-meta">
-                        <div class="product-price">KSh ${parseFloat(price).toLocaleString()}</div>
+                        <div class="product-price">KSh ${parseFloat(product.price).toLocaleString()}</div>
                         <div class="product-location">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                                 <circle cx="12" cy="10" r="3"></circle>
                             </svg>
-                            ${isDBProduct ? product.location : (currentLocation ? currentLocation.charAt(0).toUpperCase() + currentLocation.slice(1) : 'Both')}
+                            ${currentLocation ? currentLocation.charAt(0).toUpperCase() + currentLocation.slice(1) : 'Both'}
                         </div>
                     </div>
                     <span class="stock-badge ${stockStatus}">${stockText}</span>
@@ -396,11 +470,9 @@ function renderProducts(filteredProducts = null) {
     
     // Initialize 3D effects for each product
     productsToRender.forEach(product => {
-        const isDBProduct = product.price_kes !== undefined;
-        const imageUrl = isDBProduct && product.primary_image_path ? 
-            getProductImageUrl(product.primary_image_path) : null;
+        const hasImage = product.imageUrl && product.imageUrl.trim() !== '';
         
-        if (imageUrl) {
+        if (hasImage) {
             // Add 3D tilt effect to images
             setTimeout(() => init3DTiltEffect(product.id), 100);
         } else {
@@ -410,7 +482,7 @@ function renderProducts(filteredProducts = null) {
     });
 }
 
-// 3D Tilt Effect for 2D Images
+// 3D Tilt Effect for 2D Images (new feature)
 function init3DTiltEffect(productId) {
     const productCard = document.querySelector(`[data-image-id="${productId}"]`);
     if (!productCard) return;
@@ -536,77 +608,42 @@ function renderProductPreview(productId) {
 
 // Full 3D Viewer
 function openProductViewer(productId) {
-    const allProducts = productsFromDB.length > 0 ? productsFromDB : products;
-    selectedProduct = allProducts.find(p => p.id == productId);
+    selectedProduct = products.find(p => p.id == productId);
     if (!selectedProduct) return;
     
-    const isDBProduct = selectedProduct.price_kes !== undefined;
-    
     const modal = document.getElementById('viewerModal');
-    const price = isDBProduct ? selectedProduct.price_kes : selectedProduct.price;
-    
     document.getElementById('modalProductName').textContent = selectedProduct.name;
-    document.getElementById('modalProductPrice').textContent = `KSh ${parseFloat(price).toLocaleString()}`;
+    document.getElementById('modalProductPrice').textContent = `KSh ${selectedProduct.price.toLocaleString()}`;
     document.getElementById('modalCategory').textContent = getCategoryName(selectedProduct.category);
     
-    let stockStatus, stockText;
+    const locationStock = currentLocation ? 
+        selectedProduct.locations[currentLocation] : 
+        { stock: Math.max(selectedProduct.locations.embu.stock, selectedProduct.locations.garissa.stock), available: true };
     
-    if (isDBProduct) {
-        const stockQty = selectedProduct.stock_quantity;
-        const inStock = stockQty > 0;
-        stockStatus = !inStock ? 'out-of-stock' : stockQty < 5 ? 'low-stock' : 'in-stock';
-        stockText = !inStock ? 'Out of Stock' : stockQty < 5 ? `Low Stock (${stockQty})` : 'In Stock';
-        document.getElementById('modalLocation').textContent = selectedProduct.location;
-    } else {
-        const locationStock = currentLocation ? 
-            selectedProduct.locations[currentLocation] : 
-            { stock: Math.max(selectedProduct.locations.embu.stock, selectedProduct.locations.garissa.stock), available: true };
-        
-        stockStatus = !locationStock.available ? 'out-of-stock' : 
+    document.getElementById('modalLocation').textContent = currentLocation ? 
+        currentLocation.charAt(0).toUpperCase() + currentLocation.slice(1) : 'Embu & Garissa';
+    
+    const stockStatus = !locationStock.available ? 'out-of-stock' : 
                        locationStock.stock < 5 ? 'low-stock' : 'in-stock';
-        stockText = !locationStock.available ? 'Out of Stock' : 
+    const stockText = !locationStock.available ? 'Out of Stock' : 
                      locationStock.stock < 5 ? `Low Stock (${locationStock.stock})` : 'In Stock';
-        document.getElementById('modalLocation').textContent = currentLocation ? 
-            currentLocation.charAt(0).toUpperCase() + currentLocation.slice(1) : 'Embu & Garissa';
-    }
     
     const stockBadge = document.getElementById('modalStock');
     stockBadge.textContent = stockText;
     stockBadge.className = `stock-badge ${stockStatus}`;
     
-    document.getElementById('modalDescription').textContent = selectedProduct.description || 'Quality auto part';
+    document.getElementById('modalDescription').textContent = selectedProduct.description;
     
     // Render specifications
-    let specsHtml = '<h4>Specifications</h4>';
-    
-    if (isDBProduct) {
-        // Database product specifications
-        const specs = [];
-        if (selectedProduct.manufacturer) specs.push(['Manufacturer', selectedProduct.manufacturer]);
-        if (selectedProduct.part_number) specs.push(['Part Number', selectedProduct.part_number]);
-        if (selectedProduct.sku) specs.push(['SKU', selectedProduct.sku]);
-        if (selectedProduct.weight_kg) specs.push(['Weight', `${selectedProduct.weight_kg} kg`]);
-        if (selectedProduct.dimensions_cm) specs.push(['Dimensions', selectedProduct.dimensions_cm]);
-        
-        if (specs.length > 0) {
-            specsHtml += specs.map(([key, value]) => `
-                <div class="spec-row">
-                    <span class="spec-label">${key}</span>
-                    <span class="spec-value">${value}</span>
-                </div>
-            `).join('');
-        } else {
-            specsHtml += '<p style="color: var(--text-muted);">No specifications available</p>';
-        }
-    } else if (selectedProduct.specs) {
-        specsHtml += Object.entries(selectedProduct.specs).map(([key, value]) => `
+    const specsHtml = `
+        <h4>Specifications</h4>
+        ${Object.entries(selectedProduct.specs).map(([key, value]) => `
             <div class="spec-row">
                 <span class="spec-label">${key}</span>
                 <span class="spec-value">${value}</span>
             </div>
-        `).join('');
-    }
-    
+        `).join('')}
+    `;
     document.getElementById('modalSpecs').innerHTML = specsHtml;
     
     modal.classList.add('active');
@@ -769,48 +806,36 @@ function closeViewer() {
 function addToCart() {
     if (!selectedProduct) return;
     
-    const isDBProduct = selectedProduct.price_kes !== undefined;
-    const price = isDBProduct ? selectedProduct.price_kes : selectedProduct.price;
-    
-    if (!isDBProduct) {
-        // Sample product - check location
-        if (!currentLocation) {
-            alert('Please select a location first (Embu or Garissa)');
-            closeViewer();
-            openLocationModal();
-            return;
-        }
-        
-        const locationStock = selectedProduct.locations[currentLocation];
-        if (!locationStock.available || locationStock.stock === 0) {
-            alert('This item is out of stock in your selected location.');
-            return;
-        }
-    } else {
-        // DB product - simple stock check
-        if (selectedProduct.stock_quantity <= 0) {
-            alert('This item is out of stock.');
-            return;
-        }
+    if (!currentLocation) {
+        alert('Please select a location first (Embu or Garissa)');
+        closeViewer();
+        openLocationModal();
+        return;
     }
     
-    const existingItem = cart.find(item => item.id == selectedProduct.id);
+    const locationStock = selectedProduct.locations[currentLocation];
+    if (!locationStock.available || locationStock.stock === 0) {
+        alert('This item is out of stock in your selected location.');
+        return;
+    }
+    
+    const existingItem = cart.find(item => item.id === selectedProduct.id);
     if (existingItem) {
         existingItem.quantity += 1;
     } else {
         cart.push({
             id: selectedProduct.id,
             name: selectedProduct.name,
-            price: price,
+            price: selectedProduct.price,
             quantity: 1,
-            location: isDBProduct ? selectedProduct.location : currentLocation
+            location: currentLocation
         });
     }
     
     localStorage.setItem('cart', JSON.stringify(cart));
     updateCartDisplay();
     
-    // Track add to cart if backend is available
+    // Track add to cart if backend available
     if (typeof trackAddToCart === 'function') {
         trackAddToCart(selectedProduct.id, selectedProduct.name, 1);
     }
@@ -832,38 +857,17 @@ function attachEventListeners() {
     const locationFilter = document.getElementById('locationFilter');
     
     const filterProducts = () => {
-        const allProducts = productsFromDB.length > 0 ? productsFromDB : products;
         const searchTerm = searchInput.value.toLowerCase();
         const category = categoryFilter.value;
         const make = makeFilter.value;
         const location = locationFilter.value;
         
-        let filtered = allProducts.filter(product => {
-            const isDBProduct = product.price_kes !== undefined;
-            const description = product.description || '';
-            
+        let filtered = products.filter(product => {
             const matchesSearch = product.name.toLowerCase().includes(searchTerm) || 
-                                 description.toLowerCase().includes(searchTerm);
+                                 product.description.toLowerCase().includes(searchTerm);
             const matchesCategory = !category || product.category === category;
-            
-            let matchesMake = true;
-            if (make) {
-                if (isDBProduct) {
-                    // DB products may not have 'make' field, check compatible_models or manufacturer
-                    matchesMake = product.manufacturer?.toLowerCase().includes(make.toLowerCase()) || false;
-                } else {
-                    matchesMake = product.make === make;
-                }
-            }
-            
-            let matchesLocation = true;
-            if (location) {
-                if (isDBProduct) {
-                    matchesLocation = product.location.toLowerCase() === location.toLowerCase();
-                } else {
-                    matchesLocation = product.locations[location]?.available || false;
-                }
-            }
+            const matchesMake = !make || product.make === make;
+            const matchesLocation = !location || product.locations[location].available;
             
             return matchesSearch && matchesCategory && matchesMake && matchesLocation;
         });
