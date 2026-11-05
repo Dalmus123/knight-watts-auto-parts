@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Exact Scenario Test</title>
+</head>
+<body>
+  <h1>Testing Exact Admin Scenario</h1>
+  <div id="output"></div>
+  
+  <!-- Load Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Simulate config.js -->
+  <script>
+    const supabaseConfig = {
+      url: 'https://selvxrprxbkznxtfesxe.supabase.co',
+      anonKey: 'test-key'
+    };
+    
+    function initSupabase() {
+      if (typeof window !== 'undefined' && window.supabase && window.supabase.createClient) {
+        return window.supabase.createClient(supabaseConfig.url, supabaseConfig.anonKey);
+      }
+      return null;
+    }
+    
+    function isConfigured() {
+      return supabaseConfig.url && supabaseConfig.url.includes('supabase.co');
+    }
+    
+    document.getElementById('output').innerHTML += '<p>✓ config.js loaded</p>';
+  </script>
+  
+  <!-- Simulate admin.js -->
+  <script>
+    let supabase = null;
+    let currentUser = null;
+    
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!isConfigured()) {
+        document.getElementById('output').innerHTML += '<p>❌ Not configured</p>';
+        return;
+      }
+      
+      supabase = initSupabase();
+      document.getElementById('output').innerHTML += '<p>✓ admin.js loaded and initialized</p>';
+      document.getElementById('output').innerHTML += '<p>supabase type: ' + typeof supabase + '</p>';
+    });
+  </script>
+</body>
+</html>

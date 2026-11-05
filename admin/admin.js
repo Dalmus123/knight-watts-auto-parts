@@ -3,7 +3,7 @@
  * Main admin interface controller
  */
 
-let supabase = null;
+let supabaseClient = null;
 let currentUser = null;
 let currentUserProfile = null;
 
@@ -16,15 +16,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     // Initialize Supabase client
-    supabase = initSupabase();
+    supabaseClient = initSupabase();
     
-    if (!supabase) {
+    if (!supabaseClient) {
         showError('Failed to initialize Supabase client. Please check the console for errors.');
         return;
     }
     
     // Check for existing session
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await supabaseClient.auth.getSession();
     
     if (session) {
         await loadUserProfile(session.user);
@@ -46,7 +46,7 @@ function setupAuthListeners() {
     document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
     
     // Listen for auth state changes
-    supabase.auth.onAuthStateChange(async (event, session) => {
+    supabaseClient.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN') {
             await loadUserProfile(session.user);
         } else if (event === 'SIGNED_OUT') {
@@ -65,7 +65,7 @@ async function handleLogin(e) {
     errorDiv.style.display = 'none';
     
     try {
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
             email,
             password
         });
@@ -81,7 +81,7 @@ async function handleLogin(e) {
 
 async function handleLogout() {
     try {
-        await supabase.auth.signOut();
+        await supabaseClient.auth.signOut();
     } catch (error) {
         console.error('Logout error:', error);
     }
@@ -89,7 +89,7 @@ async function handleLogout() {
 
 async function loadUserProfile(user) {
     try {
-        const { data: profile, error } = await supabase
+        const { data: profile, error } = await supabaseClient
             .from('user_profiles')
             .select('*')
             .eq('id', user.id)
@@ -99,7 +99,7 @@ async function loadUserProfile(user) {
             if (error.code === 'PGRST116') {
                 // Profile doesn't exist
                 showError('Your account has not been set up yet. Please contact the system administrator.');
-                await supabase.auth.signOut();
+                await supabaseClient.auth.signOut();
                 return;
             }
             throw error;
@@ -293,14 +293,14 @@ async function loadDashboard() {
 async function loadDashboardStats() {
     try {
         // Get total orders
-        const { count: ordersCount } = await supabase
+        const { count: ordersCount } = await supabaseClient
             .from('orders')
             .select('*', { count: 'exact', head: true });
         
         document.getElementById('totalOrders').textContent = ordersCount || 0;
         
         // Get total revenue
-        const { data: revenueData } = await supabase
+        const { data: revenueData } = await supabaseClient
             .from('orders')
             .select('total_kes')
             .not('status', 'eq', 'cancelled');
@@ -309,7 +309,7 @@ async function loadDashboardStats() {
         document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
         
         // Get pending requests
-        const { count: requestsCount } = await supabase
+        const { count: requestsCount } = await supabaseClient
             .from('custom_part_requests')
             .select('*', { count: 'exact', head: true })
             .eq('status', 'pending');
@@ -317,7 +317,7 @@ async function loadDashboardStats() {
         document.getElementById('pendingRequests').textContent = requestsCount || 0;
         
         // Get active print jobs
-        const { count: printJobsCount } = await supabase
+        const { count: printJobsCount } = await supabaseClient
             .from('print_jobs')
             .select('*', { count: 'exact', head: true })
             .in('status', ['queued', 'printing']);
@@ -325,7 +325,7 @@ async function loadDashboardStats() {
         document.getElementById('activePrintJobs').textContent = printJobsCount || 0;
         
         // Load recent orders
-        const { data: recentOrders } = await supabase
+        const { data: recentOrders } = await supabaseClient
             .from('orders')
             .select('*')
             .order('created_at', { ascending: false })
@@ -334,7 +334,7 @@ async function loadDashboardStats() {
         renderRecentOrders(recentOrders);
         
         // Load recent requests
-        const { data: recentRequests } = await supabase
+        const { data: recentRequests } = await supabaseClient
             .from('custom_part_requests')
             .select('*')
             .order('created_at', { ascending: false })
@@ -459,7 +459,7 @@ async function loadProducts() {
 
 async function refreshProductsTable() {
     try {
-        const { data: products, error } = await supabase
+        const { data: products, error } = await supabaseClient
             .from('products')
             .select('*')
             .order('created_at', { ascending: false });
@@ -563,7 +563,7 @@ async function loadOrders() {
 
 async function refreshOrdersTable() {
     try {
-        const { data: orders, error } = await supabase
+        const { data: orders, error } = await supabaseClient
             .from('orders')
             .select('*')
             .order('created_at', { ascending: false });
@@ -663,7 +663,7 @@ async function loadRequests() {
 
 async function refreshRequestsTable() {
     try {
-        const { data: requests, error } = await supabase
+        const { data: requests, error } = await supabaseClient
             .from('custom_part_requests')
             .select('*')
             .order('created_at', { ascending: false });
@@ -758,7 +758,7 @@ async function loadPrintQueue() {
 async function refreshPrintQueue() {
     try {
         // Get print jobs
-        const { data: printJobs, error: jobsError } = await supabase
+        const { data: printJobs, error: jobsError } = await supabaseClient
             .from('print_jobs')
             .select('*, assigned_printer:printers(*)')
             .in('status', ['pending_approval', 'approved', 'queued', 'printing'])
@@ -768,7 +768,7 @@ async function refreshPrintQueue() {
         if (jobsError) throw jobsError;
         
         // Get printer stats
-        const { data: printers } = await supabase
+        const { data: printers } = await supabaseClient
             .from('printers')
             .select('status')
             .eq('is_active', true);
@@ -888,7 +888,7 @@ async function loadAnalytics() {
 async function loadAnalyticsData() {
     try {
         // Get total views
-        const { count: viewsCount } = await supabase
+        const { count: viewsCount } = await supabaseClient
             .from('site_events')
             .select('*', { count: 'exact', head: true })
             .eq('event_type', 'page_view');
@@ -896,7 +896,7 @@ async function loadAnalyticsData() {
         document.getElementById('totalViews').textContent = viewsCount || 0;
         
         // Get unique visitors
-        const { data: sessionsData } = await supabase
+        const { data: sessionsData } = await supabaseClient
             .from('site_events')
             .select('session_id')
             .eq('event_type', 'page_view');
@@ -905,7 +905,7 @@ async function loadAnalyticsData() {
         document.getElementById('uniqueVisitors').textContent = uniqueSessions.size;
         
         // Get total sales
-        const { data: salesData } = await supabase
+        const { data: salesData } = await supabaseClient
             .from('orders')
             .select('total_kes')
             .in('status', ['confirmed', 'completed']);
@@ -914,7 +914,7 @@ async function loadAnalyticsData() {
         document.getElementById('totalSales').textContent = formatCurrency(totalSales);
         
         // Calculate conversion rate (orders / unique visitors)
-        const { count: ordersCount } = await supabase
+        const { count: ordersCount } = await supabaseClient
             .from('orders')
             .select('*', { count: 'exact', head: true });
         
@@ -922,7 +922,7 @@ async function loadAnalyticsData() {
         document.getElementById('conversionRate').textContent = conversionRate + '%';
         
         // Get top products
-        const { data: productViews } = await supabase
+        const { data: productViews } = await supabaseClient
             .from('site_events')
             .select('product_id')
             .eq('event_type', 'product_view')
@@ -941,7 +941,7 @@ async function loadAnalyticsData() {
             .map(([id]) => id);
         
         if (topProductIds.length > 0) {
-            const { data: products } = await supabase
+            const { data: products } = await supabaseClient
                 .from('products')
                 .select('id, name, category, price_kes')
                 .in('id', topProductIds);
@@ -957,7 +957,7 @@ async function loadAnalyticsData() {
         }
         
         // Get recent events
-        const { data: recentEvents } = await supabase
+        const { data: recentEvents } = await supabaseClient
             .from('site_events')
             .select('*')
             .order('created_at', { ascending: false })
@@ -1058,7 +1058,7 @@ async function loadReports() {
 
 async function refreshReports() {
     try {
-        const { data: reports, error } = await supabase
+        const { data: reports, error } = await supabaseClient
             .from('reports')
             .select('*')
             .eq('report_type', 'daily_summary')
@@ -1136,7 +1136,7 @@ async function loadUsers() {
 
 async function refreshUsersTable() {
     try {
-        const { data: users, error } = await supabase
+        const { data: users, error } = await supabaseClient
             .from('user_profiles')
             .select('*')
             .order('created_at', { ascending: false });
@@ -1230,7 +1230,7 @@ async function approvePrintJob(id) {
     if (!confirm('Approve this print job?')) return;
     
     try {
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('print_jobs')
             .update({ 
                 status: 'approved',
@@ -1252,7 +1252,7 @@ async function confirmBedClear(id) {
     if (!confirm('Confirm that the print bed is clear and ready?')) return;
     
     try {
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('print_jobs')
             .update({
                 bed_clear_confirmed: true,
@@ -1276,7 +1276,7 @@ async function markJobComplete(id) {
     if (!confirm('Mark this print job as complete?')) return;
     
     try {
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('print_jobs')
             .update({
                 status: 'done',
@@ -1298,7 +1298,7 @@ async function markJobFailed(id) {
     if (!reason) return;
     
     try {
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('print_jobs')
             .update({
                 status: 'failed',
@@ -1321,12 +1321,12 @@ async function generateDailyReport() {
         const today = new Date().toISOString().split('T')[0];
         
         // Get today's data
-        const { data: orders } = await supabase
+        const { data: orders } = await supabaseClient
             .from('orders')
             .select('*')
             .gte('created_at', today);
         
-        const { data: requests } = await supabase
+        const { data: requests } = await supabaseClient
             .from('custom_part_requests')
             .select('*')
             .gte('created_at', today);
@@ -1342,7 +1342,7 @@ async function generateDailyReport() {
         };
         
         // Save report
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('reports')
             .insert({
                 report_type: 'daily_summary',
