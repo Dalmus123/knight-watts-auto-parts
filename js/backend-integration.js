@@ -18,18 +18,20 @@ async function initBackend() {
             // Generate or retrieve session ID
             sessionId = getOrCreateSessionId();
             
-            console.log('Backend integration enabled');
+            console.log('[Backend Integration] Backend enabled, Supabase client initialized');
             
-            // Track page view
+            // Track page view (async, don't wait)
             trackPageView();
             
             return true;
         } else {
-            console.log('Backend not configured - running in offline mode');
+            console.warn('[Backend Integration] Backend not configured - running in offline mode');
+            backendEnabled = false;
             return false;
         }
     } catch (error) {
-        console.error('Backend initialization error:', error);
+        console.error('[Backend Integration] Initialization error:', error);
+        backendEnabled = false;
         return false;
     }
 }
@@ -259,10 +261,13 @@ async function uploadRequestAttachment(file, requestId) {
 // Get Products (optional - for dynamic product loading)
 async function getProducts(filters = {}) {
     if (!backendEnabled || !backendClient) {
+        console.warn('[Backend Integration] getProducts() called but backend not enabled');
         return { success: false, offline: true, products: [] };
     }
     
     try {
+        console.log('[Backend Integration] Fetching products from Supabase...', filters);
+        
         let query = backendClient
             .from('products')
             .select('*')
@@ -280,18 +285,27 @@ async function getProducts(filters = {}) {
         
         if (error) throw error;
         
+        console.log(`[Backend Integration] Fetched ${data?.length || 0} products from database`);
+        
         return { success: true, products: data };
     } catch (error) {
-        console.error('Get products error:', error);
+        console.error('[Backend Integration] Get products error:', error);
         return { success: false, error: error.message, products: [] };
     }
 }
 
-// Initialize on page load
+// Initialize immediately and expose promise for other scripts to wait on
+let backendInitPromise = null;
+
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initBackend);
+    backendInitPromise = new Promise((resolve) => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initBackend();
+            resolve();
+        });
+    });
 } else {
-    initBackend();
+    backendInitPromise = initBackend();
 }
 
 // Export functions for use in other scripts
@@ -304,5 +318,6 @@ window.backendIntegration = {
     submitOrder,
     uploadRequestAttachment,
     getProducts,
-    isEnabled: () => backendEnabled
+    isEnabled: () => backendEnabled,
+    waitForInit: () => backendInitPromise
 };
