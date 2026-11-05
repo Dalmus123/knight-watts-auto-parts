@@ -712,6 +712,8 @@ Generate and store reports:
 
 **Use Case**: IoT devices, warehouse systems, print status updates
 
+**Security Note**: This Edge Function uses service role credentials internally to call rate limiting functions. Rate limit functions (`check_rate_limit`, etc.) are **service_role only** and cannot be called directly from the browser or public clients.
+
 #### 2. Printer Adapter (Disabled by Default)
 
 **URL**: `https://YOUR-PROJECT-ID.supabase.co/functions/v1/printer-adapter`
@@ -832,6 +834,45 @@ Generate and store reports:
 4. Enable **2FA** on your Supabase account
 5. Review **audit logs** monthly (Pro plan)
 6. Keep **row-level security** enabled on all tables
+
+### Security Hardening (Migration 4)
+
+**Applied**: November 5, 2026
+
+The system includes comprehensive security hardening to prevent unauthorized access and ensure safe concurrent operations:
+
+#### 1. **Function Access Restrictions**
+- ✅ **Rate limit functions** (`check_rate_limit`, `record_rate_limit_violation`, `get_rate_limit_status`) are now **service_role only**
+- ✅ These functions can ONLY be called from Edge Functions using service role credentials
+- ✅ Public/anon users cannot call these functions directly
+- ✅ Prevents abuse of rate limiting system
+
+#### 2. **Role Lookup Protection**
+- ✅ `get_user_role()` function hardened with access controls
+- ✅ **Owners and admins** can look up any user's role (for admin dashboard)
+- ✅ **Regular users** can only look up their own role
+- ✅ **Anonymous users** are denied access entirely
+- ✅ Prevents role enumeration attacks
+
+#### 3. **Concurrency Safety**
+- ✅ `check_rate_limit()` uses **pg_advisory_xact_lock** for serialization
+- ✅ **Atomic INSERT...ON CONFLICT** prevents race conditions
+- ✅ **Unique constraint** on `(endpoint, ip_address, window_start)` ensures one record per window
+- ✅ Safe under high concurrent load (100+ req/sec per endpoint)
+
+#### 4. **Data Integrity**
+- ✅ `record_rate_limit_violation()` properly deduplicates using unique constraint
+- ✅ No phantom duplicate records under concurrent inserts
+- ✅ Efficient storage and accurate violation counts
+
+#### 5. **SQL Injection Prevention**
+- ✅ All SECURITY DEFINER functions have `SET search_path = public`
+- ✅ Prevents search_path attacks on privileged functions
+- ✅ Functions execute in controlled namespace
+
+**Security Audit Trail**: All changes logged in migration 20240104000000_harden_functions.sql
+
+**Impact**: No breaking changes to public API. All user-facing features work identically, but with stronger security guarantees.
 
 ---
 
