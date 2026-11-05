@@ -89,7 +89,7 @@ async function loadDeliveriesPage() {
 
 async function refreshDeliveriesView() {
     try {
-        const { data: deliveries, error } = await supabase
+        const { data: deliveries, error } = await supabaseClient
             .from('deliveries')
             .select(`
                 *,
@@ -255,7 +255,7 @@ function renderDeliveryCard(delivery) {
 
 async function viewDeliveryDetails(id) {
     try {
-        const { data: delivery, error } = await supabase
+        const { data: delivery, error } = await supabaseClient
             .from('deliveries')
             .select(`
                 *,
@@ -357,7 +357,7 @@ async function viewDeliveryDetails(id) {
 
 async function updateDeliveryStatus(id, newStatus) {
     try {
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('deliveries')
             .update({ status: newStatus })
             .eq('id', id);
@@ -377,7 +377,7 @@ async function updateDeliveryLocation(id) {
 
     try {
         // Call the function to add tracking update
-        const { error } = await supabase.rpc('add_delivery_tracking_update', {
+        const { error } = await supabaseClient.rpc('add_delivery_tracking_update', {
             delivery_id: id,
             update_status: 'location_update',
             update_location: location,
@@ -398,7 +398,7 @@ async function markDelivered(id) {
     if (!deliveredTo) return;
 
     try {
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('deliveries')
             .update({
                 status: 'delivered',
@@ -418,10 +418,10 @@ async function markDelivered(id) {
 
 function subscribeToDeliveries() {
     if (deliverySubscription) {
-        supabase.removeChannel(deliverySubscription);
+        supabaseClient.removeChannel(deliverySubscription);
     }
 
-    deliverySubscription = supabase
+    deliverySubscription = supabaseClient
         .channel('deliveries_realtime')
         .on(
             'postgres_changes',
@@ -472,7 +472,7 @@ function formatTime(timestamp) {
 // Cleanup
 window.addEventListener('beforeunload', () => {
     if (deliverySubscription) {
-        supabase.removeChannel(deliverySubscription);
+        supabaseClient.removeChannel(deliverySubscription);
     }
 });
 
