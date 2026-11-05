@@ -36,12 +36,12 @@
                     <a href="#contact" class="nav-link">Contact</a>
                 </nav>
                 <div class="header-actions">
-                    <button class="location-btn" id="locationBtn">
+                    <button class="location-btn" id="locationBtn" title="Filter products by location">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                             <circle cx="12" cy="10" r="3"></circle>
                         </svg>
-                        <span id="currentLocation">Select Location</span>
+                        <span id="currentLocation">All Locations</span>
                     </button>
                     <button class="cart-btn" onclick="window.location.href='checkout.html'" title="View Cart & Checkout">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -317,15 +317,19 @@
         <div class="modal-content modal-small">
             <button class="modal-close" onclick="closeLocationModal()">&times;</button>
             <h3>Select Your Location</h3>
-            <p style="margin-bottom: 20px;">Choose your preferred location to see available stock</p>
+            <p style="margin-bottom: 20px;">Filter products by location to see local stock</p>
             <div class="location-options">
+                <button class="location-option" onclick="clearLocationFilter()">
+                    <strong>All Locations</strong>
+                    <span>Show all products (default)</span>
+                </button>
                 <button class="location-option" onclick="selectLocation('embu')">
-                    <strong>Embu</strong>
-                    <span>1,200+ parts available</span>
+                    <strong>Embu Branch</strong>
+                    <span>Filter to Embu stock only</span>
                 </button>
                 <button class="location-option" onclick="selectLocation('garissa')">
-                    <strong>Garissa</strong>
-                    <span>800+ parts available</span>
+                    <strong>Garissa Branch</strong>
+                    <span>Filter to Garissa stock only</span>
                 </button>
             </div>
         </div>
