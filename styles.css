@@ -969,3 +969,53 @@ html {
 ::-webkit-scrollbar-thumb:hover {
     background: var(--grey-500);
 }
+
+/* 3D Tilt Effect for Product Images */
+.product-3d-wrapper {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.1s ease-out;
+    will-change: transform;
+}
+
+.product-2d-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+.product-3d-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0) 50%,
+        rgba(0, 0, 0, 0.1) 100%
+    );
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.product-image-3d:hover .product-3d-overlay {
+    opacity: 1;
+}
+
+/* Enhanced product card for 3D effect */
+.product-card {
+    transform-style: preserve-3d;
+}
+
+.product-image-3d {
+    overflow: visible;
+    transform-style: preserve-3d;
+}

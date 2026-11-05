@@ -8,8 +8,10 @@ let currentLocation = localStorage.getItem('selectedLocation') || null;
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
 let scene, camera, renderer, currentMesh;
 let selectedProduct = null;
+let supabaseClient = null;
+let productsFromDB = [];
 
-// Product Database - Sample car spare parts
+// Product Database - Sample car spare parts (fallback)
 const products = [
     {
         id: 1,
@@ -235,13 +237,58 @@ const products = [
 ];
 
 // Initialize app
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    await initializeSupabase();
     initializeLocation();
+    await loadProductsFromDB();
     renderProducts();
     attachEventListeners();
     updateCartDisplay();
     initNavigation();
 });
+
+// Initialize Supabase
+async function initializeSupabase() {
+    if (typeof initSupabase === 'function' && typeof isConfigured === 'function' && isConfigured()) {
+        supabaseClient = initSupabase();
+        console.log('Supabase initialized for storefront');
+    } else {
+        console.log('Supabase not configured - using sample products');
+    }
+}
+
+// Load products from Supabase
+async function loadProductsFromDB() {
+    if (!supabaseClient) {
+        console.log('Using fallback sample products');
+        return;
+    }
+    
+    try {
+        const { data, error } = await supabaseClient
+            .from('products')
+            .select('*')
+            .eq('is_active', true)
+            .order('featured', { ascending: false });
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+            productsFromDB = data;
+            console.log(`Loaded ${data.length} products from database`);
+        }
+    } catch (error) {
+        console.error('Error loading products from database:', error);
+    }
+}
+
+function getProductImageUrl(imagePath) {
+    if (!imagePath || !supabaseClient) return null;
+    const { data } = supabaseClient.storage
+        .from('products')
+        .getPublicUrl(imagePath);
+    return data?.publicUrl || null;
+}
 
 // Location Management
 function initializeLocation() {
@@ -270,49 +317,75 @@ function selectLocation(location) {
 
 // Product Rendering
 function renderProducts(filteredProducts = null) {
-    console.log('renderProducts called', filteredProducts ? `with ${filteredProducts.length} filtered products` : `with all ${products.length} products`);
+    const allProducts = productsFromDB.length > 0 ? productsFromDB : products;
+    console.log('renderProducts called', filteredProducts ? `with ${filteredProducts.length} filtered products` : `with all ${allProducts.length} products`);
     const grid = document.getElementById('productsGrid');
     if (!grid) {
         console.error('Products grid element not found!');
         return;
     }
-    const productsToRender = filteredProducts || products;
+    const productsToRender = filteredProducts || allProducts;
     
     grid.innerHTML = productsToRender.map(product => {
-        const locationStock = currentLocation ? 
-            product.locations[currentLocation] : 
-            { stock: Math.max(product.locations.embu.stock, product.locations.garissa.stock), available: true };
+        // Handle both DB products and sample products
+        const isDBProduct = product.price_kes !== undefined;
+        const price = isDBProduct ? product.price_kes : product.price;
+        const stockQty = isDBProduct ? product.stock_quantity : null;
+        const description = product.description || 'Quality auto part';
         
-        const stockStatus = !locationStock.available ? 'out-of-stock' : 
+        let locationStock, stockStatus, stockText;
+        
+        if (isDBProduct) {
+            // Database product - simpler stock check
+            const inStock = stockQty > 0;
+            stockStatus = !inStock ? 'out-of-stock' : stockQty < 5 ? 'low-stock' : 'in-stock';
+            stockText = !inStock ? 'Out of Stock' : stockQty < 5 ? `Low Stock (${stockQty})` : 'In Stock';
+        } else {
+            // Sample product with locations
+            locationStock = currentLocation ? 
+                product.locations[currentLocation] : 
+                { stock: Math.max(product.locations.embu.stock, product.locations.garissa.stock), available: true };
+            
+            stockStatus = !locationStock.available ? 'out-of-stock' : 
                            locationStock.stock < 5 ? 'low-stock' : 'in-stock';
-        const stockText = !locationStock.available ? 'Out of Stock' : 
+            stockText = !locationStock.available ? 'Out of Stock' : 
                          locationStock.stock < 5 ? `Low Stock (${locationStock.stock})` : 'In Stock';
+        }
+        
+        const imageUrl = isDBProduct && product.primary_image_path ? 
+            getProductImageUrl(product.primary_image_path) : null;
         
         return `
-            <div class="product-card" onclick="openProductViewer(${product.id})">
-                <div class="product-image">
-                    <canvas id="preview-${product.id}" width="280" height="220"></canvas>
+            <div class="product-card" onclick="openProductViewer('${product.id}')" data-product-id="${product.id}">
+                <div class="product-image product-image-3d" data-image-id="${product.id}">
+                    ${imageUrl ? 
+                        `<div class="product-3d-wrapper">
+                            <img src="${imageUrl}" alt="${product.name}" class="product-2d-image" />
+                            <div class="product-3d-overlay"></div>
+                        </div>` :
+                        `<canvas id="preview-${product.id}" width="280" height="220"></canvas>`
+                    }
                     <div class="view-3d-badge">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
                             <path d="M2 17l10 5 10-5"></path>
                             <path d="M2 12l10 5 10-5"></path>
                         </svg>
-                        View in 3D
+                        ${imageUrl ? 'Interactive View' : 'View in 3D'}
                     </div>
                 </div>
                 <div class="product-info">
                     <div class="product-category">${getCategoryName(product.category)}</div>
                     <h3 class="product-name">${product.name}</h3>
-                    <p class="product-description">${product.description.substring(0, 80)}...</p>
+                    <p class="product-description">${description.substring(0, 80)}...</p>
                     <div class="product-meta">
-                        <div class="product-price">KSh ${product.price.toLocaleString()}</div>
+                        <div class="product-price">KSh ${parseFloat(price).toLocaleString()}</div>
                         <div class="product-location">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                                 <circle cx="12" cy="10" r="3"></circle>
                             </svg>
-                            ${currentLocation ? currentLocation.charAt(0).toUpperCase() + currentLocation.slice(1) : 'Both'}
+                            ${isDBProduct ? product.location : (currentLocation ? currentLocation.charAt(0).toUpperCase() + currentLocation.slice(1) : 'Both')}
                         </div>
                     </div>
                     <span class="stock-badge ${stockStatus}">${stockText}</span>
@@ -321,9 +394,83 @@ function renderProducts(filteredProducts = null) {
         `;
     }).join('');
     
-    // Initialize 3D previews for each product
+    // Initialize 3D effects for each product
     productsToRender.forEach(product => {
-        setTimeout(() => renderProductPreview(product.id), 100);
+        const isDBProduct = product.price_kes !== undefined;
+        const imageUrl = isDBProduct && product.primary_image_path ? 
+            getProductImageUrl(product.primary_image_path) : null;
+        
+        if (imageUrl) {
+            // Add 3D tilt effect to images
+            setTimeout(() => init3DTiltEffect(product.id), 100);
+        } else {
+            // Render Three.js preview for products without images
+            setTimeout(() => renderProductPreview(product.id), 100);
+        }
+    });
+}
+
+// 3D Tilt Effect for 2D Images
+function init3DTiltEffect(productId) {
+    const productCard = document.querySelector(`[data-image-id="${productId}"]`);
+    if (!productCard) return;
+    
+    const wrapper = productCard.querySelector('.product-3d-wrapper');
+    if (!wrapper) return;
+    
+    // Add mouse move listener for tilt effect
+    productCard.addEventListener('mousemove', (e) => {
+        const rect = productCard.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        
+        const percentX = (x - centerX) / centerX;
+        const percentY = (y - centerY) / centerY;
+        
+        const rotateY = percentX * 15; // Max 15 degrees
+        const rotateX = -percentY * 15; // Max 15 degrees (negative for natural tilt)
+        
+        wrapper.style.transform = `
+            perspective(1000px) 
+            rotateX(${rotateX}deg) 
+            rotateY(${rotateY}deg) 
+            scale3d(1.05, 1.05, 1.05)
+        `;
+    });
+    
+    productCard.addEventListener('mouseleave', () => {
+        wrapper.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
+    });
+    
+    // Add touch support for mobile
+    productCard.addEventListener('touchmove', (e) => {
+        const touch = e.touches[0];
+        const rect = productCard.getBoundingClientRect();
+        const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+        
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        
+        const percentX = (x - centerX) / centerX;
+        const percentY = (y - centerY) / centerY;
+        
+        const rotateY = percentX * 10;
+        const rotateX = -percentY * 10;
+        
+        wrapper.style.transform = `
+            perspective(1000px) 
+            rotateX(${rotateX}deg) 
+            rotateY(${rotateY}deg) 
+            scale3d(1.03, 1.03, 1.03)
+        `;
+    });
+    
+    productCard.addEventListener('touchend', () => {
+        wrapper.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
     });
 }
 
@@ -389,42 +536,77 @@ function renderProductPreview(productId) {
 
 // Full 3D Viewer
 function openProductViewer(productId) {
-    selectedProduct = products.find(p => p.id === productId);
+    const allProducts = productsFromDB.length > 0 ? productsFromDB : products;
+    selectedProduct = allProducts.find(p => p.id == productId);
     if (!selectedProduct) return;
     
+    const isDBProduct = selectedProduct.price_kes !== undefined;
+    
     const modal = document.getElementById('viewerModal');
+    const price = isDBProduct ? selectedProduct.price_kes : selectedProduct.price;
+    
     document.getElementById('modalProductName').textContent = selectedProduct.name;
-    document.getElementById('modalProductPrice').textContent = `KSh ${selectedProduct.price.toLocaleString()}`;
+    document.getElementById('modalProductPrice').textContent = `KSh ${parseFloat(price).toLocaleString()}`;
     document.getElementById('modalCategory').textContent = getCategoryName(selectedProduct.category);
     
-    const locationStock = currentLocation ? 
-        selectedProduct.locations[currentLocation] : 
-        { stock: Math.max(selectedProduct.locations.embu.stock, selectedProduct.locations.garissa.stock), available: true };
+    let stockStatus, stockText;
     
-    document.getElementById('modalLocation').textContent = currentLocation ? 
-        currentLocation.charAt(0).toUpperCase() + currentLocation.slice(1) : 'Embu & Garissa';
-    
-    const stockStatus = !locationStock.available ? 'out-of-stock' : 
+    if (isDBProduct) {
+        const stockQty = selectedProduct.stock_quantity;
+        const inStock = stockQty > 0;
+        stockStatus = !inStock ? 'out-of-stock' : stockQty < 5 ? 'low-stock' : 'in-stock';
+        stockText = !inStock ? 'Out of Stock' : stockQty < 5 ? `Low Stock (${stockQty})` : 'In Stock';
+        document.getElementById('modalLocation').textContent = selectedProduct.location;
+    } else {
+        const locationStock = currentLocation ? 
+            selectedProduct.locations[currentLocation] : 
+            { stock: Math.max(selectedProduct.locations.embu.stock, selectedProduct.locations.garissa.stock), available: true };
+        
+        stockStatus = !locationStock.available ? 'out-of-stock' : 
                        locationStock.stock < 5 ? 'low-stock' : 'in-stock';
-    const stockText = !locationStock.available ? 'Out of Stock' : 
+        stockText = !locationStock.available ? 'Out of Stock' : 
                      locationStock.stock < 5 ? `Low Stock (${locationStock.stock})` : 'In Stock';
+        document.getElementById('modalLocation').textContent = currentLocation ? 
+            currentLocation.charAt(0).toUpperCase() + currentLocation.slice(1) : 'Embu & Garissa';
+    }
     
     const stockBadge = document.getElementById('modalStock');
     stockBadge.textContent = stockText;
     stockBadge.className = `stock-badge ${stockStatus}`;
     
-    document.getElementById('modalDescription').textContent = selectedProduct.description;
+    document.getElementById('modalDescription').textContent = selectedProduct.description || 'Quality auto part';
     
     // Render specifications
-    const specsHtml = `
-        <h4>Specifications</h4>
-        ${Object.entries(selectedProduct.specs).map(([key, value]) => `
+    let specsHtml = '<h4>Specifications</h4>';
+    
+    if (isDBProduct) {
+        // Database product specifications
+        const specs = [];
+        if (selectedProduct.manufacturer) specs.push(['Manufacturer', selectedProduct.manufacturer]);
+        if (selectedProduct.part_number) specs.push(['Part Number', selectedProduct.part_number]);
+        if (selectedProduct.sku) specs.push(['SKU', selectedProduct.sku]);
+        if (selectedProduct.weight_kg) specs.push(['Weight', `${selectedProduct.weight_kg} kg`]);
+        if (selectedProduct.dimensions_cm) specs.push(['Dimensions', selectedProduct.dimensions_cm]);
+        
+        if (specs.length > 0) {
+            specsHtml += specs.map(([key, value]) => `
+                <div class="spec-row">
+                    <span class="spec-label">${key}</span>
+                    <span class="spec-value">${value}</span>
+                </div>
+            `).join('');
+        } else {
+            specsHtml += '<p style="color: var(--text-muted);">No specifications available</p>';
+        }
+    } else if (selectedProduct.specs) {
+        specsHtml += Object.entries(selectedProduct.specs).map(([key, value]) => `
             <div class="spec-row">
                 <span class="spec-label">${key}</span>
                 <span class="spec-value">${value}</span>
             </div>
-        `).join('')}
-    `;
+        `).join('');
+    }
+    
     document.getElementById('modalSpecs').innerHTML = specsHtml;
     
     modal.classList.add('active');
@@ -587,34 +769,51 @@ function closeViewer() {
 function addToCart() {
     if (!selectedProduct) return;
     
-    if (!currentLocation) {
-        alert('Please select a location first (Embu or Garissa)');
-        closeViewer();
-        openLocationModal();
-        return;
+    const isDBProduct = selectedProduct.price_kes !== undefined;
+    const price = isDBProduct ? selectedProduct.price_kes : selectedProduct.price;
+    
+    if (!isDBProduct) {
+        // Sample product - check location
+        if (!currentLocation) {
+            alert('Please select a location first (Embu or Garissa)');
+            closeViewer();
+            openLocationModal();
+            return;
+        }
+        
+        const locationStock = selectedProduct.locations[currentLocation];
+        if (!locationStock.available || locationStock.stock === 0) {
+            alert('This item is out of stock in your selected location.');
+            return;
+        }
+    } else {
+        // DB product - simple stock check
+        if (selectedProduct.stock_quantity <= 0) {
+            alert('This item is out of stock.');
+            return;
+        }
     }
     
-    const locationStock = selectedProduct.locations[currentLocation];
-    if (!locationStock.available || locationStock.stock === 0) {
-        alert('This item is out of stock in your selected location.');
-        return;
-    }
-    
-    const existingItem = cart.find(item => item.id === selectedProduct.id);
+    const existingItem = cart.find(item => item.id == selectedProduct.id);
     if (existingItem) {
         existingItem.quantity += 1;
     } else {
         cart.push({
             id: selectedProduct.id,
             name: selectedProduct.name,
-            price: selectedProduct.price,
+            price: price,
             quantity: 1,
-            location: currentLocation
+            location: isDBProduct ? selectedProduct.location : currentLocation
         });
     }
     
     localStorage.setItem('cart', JSON.stringify(cart));
     updateCartDisplay();
+    
+    // Track add to cart if backend is available
+    if (typeof trackAddToCart === 'function') {
+        trackAddToCart(selectedProduct.id, selectedProduct.name, 1);
+    }
     
     // Show success feedback
     alert(`${selectedProduct.name} added to cart!`);
@@ -633,17 +832,38 @@ function attachEventListeners() {
     const locationFilter = document.getElementById('locationFilter');
     
     const filterProducts = () => {
+        const allProducts = productsFromDB.length > 0 ? productsFromDB : products;
         const searchTerm = searchInput.value.toLowerCase();
         const category = categoryFilter.value;
         const make = makeFilter.value;
         const location = locationFilter.value;
         
-        let filtered = products.filter(product => {
+        let filtered = allProducts.filter(product => {
+            const isDBProduct = product.price_kes !== undefined;
+            const description = product.description || '';
+            
             const matchesSearch = product.name.toLowerCase().includes(searchTerm) || 
-                                 product.description.toLowerCase().includes(searchTerm);
+                                 description.toLowerCase().includes(searchTerm);
             const matchesCategory = !category || product.category === category;
-            const matchesMake = !make || product.make === make;
-            const matchesLocation = !location || product.locations[location].available;
+            
+            let matchesMake = true;
+            if (make) {
+                if (isDBProduct) {
+                    // DB products may not have 'make' field, check compatible_models or manufacturer
+                    matchesMake = product.manufacturer?.toLowerCase().includes(make.toLowerCase()) || false;
+                } else {
+                    matchesMake = product.make === make;
+                }
+            }
+            
+            let matchesLocation = true;
+            if (location) {
+                if (isDBProduct) {
+                    matchesLocation = product.location.toLowerCase() === location.toLowerCase();
+                } else {
+                    matchesLocation = product.locations[location]?.available || false;
+                }
+            }
             
             return matchesSearch && matchesCategory && matchesMake && matchesLocation;
         });

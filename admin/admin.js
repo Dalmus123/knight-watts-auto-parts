@@ -485,6 +485,7 @@ function renderProductsTable(products) {
         <table class="data-table">
             <thead>
                 <tr>
+                    <th>Image</th>
                     <th>Name</th>
                     <th>Category</th>
                     <th>Price (KES)</th>
@@ -495,8 +496,17 @@ function renderProductsTable(products) {
                 </tr>
             </thead>
             <tbody>
-                ${products.map(product => `
+                ${products.map(product => {
+                    const imageUrl = product.primary_image_path ? 
+                        getProductImageUrl(product.primary_image_path) : null;
+                    return `
                     <tr>
+                        <td>
+                            ${imageUrl ? 
+                                `<img src="${imageUrl}" alt="${product.name}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color);">` : 
+                                '<div style="width: 60px; height: 60px; background: var(--surface-color); border-radius: 4px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); font-size: 24px;">📦</div>'
+                            }
+                        </td>
                         <td><strong>${product.name}</strong></td>
                         <td>${product.category}</td>
                         <td>KES ${formatCurrency(product.price_kes)}</td>
@@ -510,12 +520,21 @@ function renderProductsTable(products) {
                             <button class="action-btn action-btn-secondary" onclick="editProduct('${product.id}')">Edit</button>
                         </td>
                     </tr>
-                `).join('')}
+                `;
+                }).join('')}
             </tbody>
         </table>
     `;
     
     container.innerHTML = html;
+}
+
+function getProductImageUrl(imagePath) {
+    if (!imagePath) return null;
+    const { url } = supabaseClient.storage
+        .from('products')
+        .getPublicUrl(imagePath);
+    return url;
 }
 
 // Orders Page
@@ -1325,7 +1344,7 @@ function openAddProductModal() {
 
 async function editProduct(id) {
     try {
-        const { data: product, error } = await supabase
+        const { data: product, error } = await supabaseClient
             .from('products')
             .select('*')
             .eq('id', id)
@@ -1390,7 +1409,14 @@ async function editProduct(id) {
                             
                             <div class="form-group">
                                 <label>Product Image</label>
-                                ${product.primary_image_path ? `<div style="margin-bottom: 8px; color: var(--text-muted);">Current: ${product.primary_image_path.split('/').pop()}</div>` : ''}
+                                ${product.primary_image_path ? `
+                                    <div style="margin-bottom: 8px;">
+                                        <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 4px;">Current image:</div>
+                                        <img src="${getProductImageUrl(product.primary_image_path)}" 
+                                             alt="Current product image" 
+                                             style="max-width: 200px; max-height: 200px; border-radius: 4px; border: 1px solid var(--border-color);">
+                                    </div>
+                                ` : ''}
                                 <input type="file" id="productImage" accept="image/*" onchange="handleImageSelect(event)">
                                 <small style="color: var(--text-muted);">Upload new image to replace current (or leave empty to keep existing)</small>
                                 <div id="imagePreview" style="margin-top: 8px;"></div>
@@ -1513,7 +1539,7 @@ async function saveProduct(event) {
         
         if (currentEditingProductId) {
             saveBtnText.textContent = 'Updating...';
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('products')
                 .update(productData)
                 .eq('id', currentEditingProductId);
@@ -1521,7 +1547,7 @@ async function saveProduct(event) {
             if (error) throw error;
         } else {
             saveBtnText.textContent = 'Creating product...';
-            const { data: newProduct, error } = await supabase
+            const { data: newProduct, error } = await supabaseClient
                 .from('products')
                 .insert(productData)
                 .select()
@@ -1538,7 +1564,7 @@ async function saveProduct(event) {
             const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
             const filePath = `${productId}/${fileName}`;
             
-            const { error: uploadError } = await supabase.storage
+            const { error: uploadError } = await supabaseClient.storage
                 .from('products')
                 .upload(filePath, selectedImageFile, {
                     cacheControl: '3600',
@@ -1547,7 +1573,7 @@ async function saveProduct(event) {
             
             if (uploadError) throw uploadError;
             
-            const { error: updateError } = await supabase
+            const { error: updateError } = await supabaseClient
                 .from('products')
                 .update({ primary_image_path: filePath })
                 .eq('id', productId);
@@ -1573,19 +1599,19 @@ async function confirmDeleteProduct(id) {
     }
     
     try {
-        const { data: product } = await supabase
+        const { data: product } = await supabaseClient
             .from('products')
             .select('primary_image_path')
             .eq('id', id)
             .single();
         
         if (product?.primary_image_path) {
-            await supabase.storage
+            await supabaseClient.storage
                 .from('products')
                 .remove([product.primary_image_path]);
         }
         
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('products')
             .delete()
             .eq('id', id);
