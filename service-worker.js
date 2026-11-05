@@ -1,7 +1,7 @@
 // Knight Watts Auto Parts - Service Worker
 // Enables offline functionality and app-like experience
 
-const CACHE_NAME = 'knight-watts-v1.0.2';
+const CACHE_NAME = 'knight-watts-v1.0.3';
 const OFFLINE_URL = '/offline.html';
 
 // Files to cache for offline use
