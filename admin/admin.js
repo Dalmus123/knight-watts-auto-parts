@@ -1492,28 +1492,6 @@ async function saveProduct(event) {
     saveBtnText.textContent = 'Saving...';
     
     try {
-        let imagePath = null;
-        
-        if (selectedImageFile) {
-            saveBtnText.textContent = 'Uploading image...';
-            
-            const fileExt = selectedImageFile.name.split('.').pop();
-            const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-            const productId = currentEditingProductId || 'temp-' + Date.now();
-            const filePath = `${productId}/${fileName}`;
-            
-            const { data: uploadData, error: uploadError } = await supabase.storage
-                .from('products')
-                .upload(filePath, selectedImageFile, {
-                    cacheControl: '3600',
-                    upsert: false
-                });
-            
-            if (uploadError) throw uploadError;
-            
-            imagePath = filePath;
-        }
-        
         const productData = {
             name: document.getElementById('productName').value.trim(),
             category: document.getElementById('productCategory').value.trim(),
@@ -1531,31 +1509,53 @@ async function saveProduct(event) {
             created_by: currentUser.id
         };
         
-        if (imagePath) {
-            productData.primary_image_path = imagePath;
-        }
-        
-        saveBtnText.textContent = currentEditingProductId ? 'Updating...' : 'Creating...';
+        let productId = currentEditingProductId;
         
         if (currentEditingProductId) {
+            saveBtnText.textContent = 'Updating...';
             const { error } = await supabase
                 .from('products')
                 .update(productData)
                 .eq('id', currentEditingProductId);
             
             if (error) throw error;
-            
-            showSuccess('Product updated successfully');
         } else {
-            const { error } = await supabase
+            saveBtnText.textContent = 'Creating product...';
+            const { data: newProduct, error } = await supabase
                 .from('products')
-                .insert(productData);
+                .insert(productData)
+                .select()
+                .single();
             
             if (error) throw error;
-            
-            showSuccess('Product created successfully');
+            productId = newProduct.id;
         }
         
+        if (selectedImageFile && productId) {
+            saveBtnText.textContent = 'Uploading image...';
+            
+            const fileExt = selectedImageFile.name.split('.').pop();
+            const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+            const filePath = `${productId}/${fileName}`;
+            
+            const { error: uploadError } = await supabase.storage
+                .from('products')
+                .upload(filePath, selectedImageFile, {
+                    cacheControl: '3600',
+                    upsert: false
+                });
+            
+            if (uploadError) throw uploadError;
+            
+            const { error: updateError } = await supabase
+                .from('products')
+                .update({ primary_image_path: filePath })
+                .eq('id', productId);
+            
+            if (updateError) throw updateError;
+        }
+        
+        showSuccess(currentEditingProductId ? 'Product updated successfully' : 'Product created successfully');
         closeProductModal();
         await refreshProductsTable();
         
