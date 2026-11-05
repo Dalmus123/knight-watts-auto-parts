@@ -401,7 +401,7 @@ function renderProducts(filteredProducts = null) {
         const canvasDisplay = hasImage ? 'style="display: none;"' : '';
         
         return `
-            <div class="product-card" onclick="openProductViewer(${product.id})">
+            <div class="product-card" onclick="openProductViewer('${product.id}')">
                 <div class="product-image">
                     ${imageContent}
                     <canvas id="preview-${product.id}" width="280" height="220" ${canvasDisplay}></canvas>
@@ -504,7 +504,7 @@ function renderProductPreview(productId) {
 
 // Full 3D Viewer
 function openProductViewer(productId) {
-    selectedProduct = products.find(p => p.id === productId);
+    selectedProduct = products.find(p => p.id == productId);
     if (!selectedProduct) return;
     
     const modal = document.getElementById('viewerModal');
