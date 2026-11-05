@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track Your Order | Knight Watts Auto Parts</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase/config.js"></script>
+    <style>
+        .tracking-container {
+            max-width: 800px;
+            margin: 80px auto;
+            padding: 0 20px;
+        }
+
+        .tracking-search {
+            background: var(--dark-card);
+            border: 2px solid var(--dark-border);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        .tracking-search h1 {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .tracking-search p {
+            color: var(--text-muted);
+            margin-bottom: 32px;
+        }
+
+        .tracking-form {
+            display: flex;
+            gap: 12px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .tracking-form input {
+            flex: 1;
+            padding: 14px 20px;
+            background: var(--dark-bg);
+            border: 2px solid var(--dark-border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 16px;
+        }
+
+        .tracking-form input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .tracking-result {
+            background: var(--dark-card);
+            border: 2px solid var(--dark-border);
+            border-radius: 16px;
+            padding: 40px;
+            display: none;
+        }
+
+        .tracking-result.active {
+            display: block;
+        }
+
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 32px;
+            padding-bottom: 24px;
+            border-bottom: 2px solid var(--dark-border);
+        }
+
+        .order-info h2 {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .order-info p {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .status-timeline {
+            margin-bottom: 32px;
+        }
+
+        .timeline-item {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 24px;
+            position: relative;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 40px;
+            bottom: -24px;
+            width: 2px;
+            background: var(--dark-border);
+        }
+
+        .timeline-item:last-child::before {
+            display: none;
+        }
+
+        .timeline-dot {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--dark-bg);
+            border: 3px solid var(--dark-border);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .timeline-item.active .timeline-dot {
+            border-color: var(--primary-color);
+            background: var(--primary-color);
+        }
+
+        .timeline-item.completed .timeline-dot {
+            border-color: var(--success);
+            background: var(--success);
+        }
+
+        .timeline-content {
+            flex: 1;
+        }
+
+        .timeline-content h3 {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+
+        .timeline-content p {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .timeline-content .timestamp {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-top: 8px;
+        }
+
+        .delivery-details {
+            background: var(--dark-bg);
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 32px;
+        }
+
+        .delivery-details h3 {
+            font-size: 18px;
+            margin-bottom: 16px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--dark-border);
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            color: var(--text-muted);
+        }
+
+        .detail-value {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 2px solid var(--danger);
+            color: var(--danger);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            display: none;
+        }
+
+        .error-message.active {
+            display: block;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top-color: var(--primary-color);
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                        <path d="M20 5L35 15V25L20 35L5 25V15L20 5Z" stroke="#00A86B" stroke-width="2" fill="none"/>
+                        <circle cx="20" cy="20" r="6" fill="#00A86B"/>
+                        <path d="M15 20L18 23L25 16" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>KNIGHT <span class="ke">WATTS</span></span>
+                </div>
+                <nav class="nav">
+                    <a href="index.html" class="nav-link">Home</a>
+                    <a href="index.html#products" class="nav-link">Parts</a>
+                    <a href="track-order.html" class="nav-link active">Track Order</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <div class="tracking-container">
+        <div class="tracking-search">
+            <h1>Track Your Order</h1>
+            <p>Enter your order number to see the current status and delivery information</p>
+            
+            <form class="tracking-form" id="trackingForm">
+                <input 
+                    type="text" 
+                    id="orderNumberInput" 
+                    placeholder="e.g., ORD-20241104-0001" 
+                    required
+                    pattern="ORD-\d{8}-\d{4}"
+                >
+                <button type="submit" class="btn btn-primary">Track</button>
+            </form>
+        </div>
+
+        <div id="loadingState" class="tracking-result" style="display: none;">
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <p>Searching for your order...</p>
+            </div>
+        </div>
+
+        <div id="errorMessage" class="error-message">
+            <p id="errorText"></p>
+        </div>
+
+        <div id="trackingResult" class="tracking-result">
+            <!-- Order details will be populated here -->
+        </div>
+    </div>
+
+    <script>
+        let supabase = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize Supabase
+            if (typeof isConfigured === 'function' && isConfigured()) {
+                supabase = initSupabase();
+            }
+
+            // Handle form submission
+            document.getElementById('trackingForm').addEventListener('submit', handleTrackOrder);
+        });
+
+        async function handleTrackOrder(e) {
+            e.preventDefault();
+
+            if (!supabase) {
+                showError('Order tracking is not available. Please contact us directly.');
+                return;
+            }
+
+            const orderNumber = document.getElementById('orderNumberInput').value.trim();
+            
+            // Hide previous results
+            document.getElementById('errorMessage').classList.remove('active');
+            document.getElementById('trackingResult').classList.remove('active');
+            document.getElementById('loadingState').style.display = 'block';
+
+            try {
+                // Query the public tracking view
+                const { data, error } = await supabase
+                    .from('public_order_tracking')
+                    .select('*')
+                    .eq('order_number', orderNumber)
+                    .single();
+
+                document.getElementById('loadingState').style.display = 'none';
+
+                if (error) {
+                    if (error.code === 'PGRST116') {
+                        showError('Order not found. Please check your order number and try again.');
+                    } else {
+                        showError('Failed to retrieve order information. Please try again later.');
+                    }
+                    return;
+                }
+
+                displayOrderTracking(data);
+
+            } catch (error) {
+                document.getElementById('loadingState').style.display = 'none';
+                showError('An error occurred. Please try again later.');
+                console.error('Tracking error:', error);
+            }
+        }
+
+        function displayOrderTracking(orderData) {
+            const result = document.getElementById('trackingResult');
+            
+            // Build timeline based on order and delivery status
+            const timeline = buildTimeline(orderData);
+            
+            const html = `
+                <div class="order-header">
+                    <div class="order-info">
+                        <h2>Order ${orderData.order_number}</h2>
+                        <p>Placed on ${formatDate(orderData.order_date)}</p>
+                    </div>
+                    <div>
+                        <span class="status-badge ${orderData.order_status}">${formatStatus(orderData.order_status)}</span>
+                    </div>
+                </div>
+
+                <div class="status-timeline">
+                    <h3 style="margin-bottom: 24px; font-size: 20px;">Order Status</h3>
+                    ${timeline}
+                </div>
+
+                ${orderData.delivery_number ? `
+                    <div class="delivery-details">
+                        <h3>Delivery Information</h3>
+                        <div class="detail-row">
+                            <span class="detail-label">Delivery Number</span>
+                            <span class="detail-value">${orderData.delivery_number}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Delivery Area</span>
+                            <span class="detail-value">${orderData.delivery_area || '-'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Scheduled Date</span>
+                            <span class="detail-value">${orderData.scheduled_date ? formatDate(orderData.scheduled_date) : 'TBD'}</span>
+                        </div>
+                        ${orderData.scheduled_time_slot ? `
+                            <div class="detail-row">
+                                <span class="detail-label">Time Slot</span>
+                                <span class="detail-value">${orderData.scheduled_time_slot}</span>
+                            </div>
+                        ` : ''}
+                        ${orderData.courier_service ? `
+                            <div class="detail-row">
+                                <span class="detail-label">Courier</span>
+                                <span class="detail-value">${orderData.courier_service}</span>
+                            </div>
+                        ` : ''}
+                        ${orderData.current_location ? `
+                            <div class="detail-row">
+                                <span class="detail-label">Current Location</span>
+                                <span class="detail-value">${orderData.current_location}</span>
+                            </div>
+                        ` : ''}
+                        ${orderData.estimated_arrival ? `
+                            <div class="detail-row">
+                                <span class="detail-label">Estimated Arrival</span>
+                                <span class="detail-value">${formatDateTime(orderData.estimated_arrival)}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                ` : ''}
+
+                <div style="margin-top: 32px; padding: 20px; background: rgba(0, 168, 107, 0.1); border-radius: 12px; border: 1px solid var(--primary-color);">
+                    <p style="color: var(--text-secondary); font-size: 14px; text-align: center;">
+                        Need help? Contact us at <strong style="color: var(--primary-color);">+254 700 123 456</strong> 
+                        or email <strong style="color: var(--primary-color);">orders@knightwatts.com</strong>
+                    </p>
+                </div>
+            `;
+
+            result.innerHTML = html;
+            result.classList.add('active');
+        }
+
+        function buildTimeline(orderData) {
+            const statuses = [
+                { key: 'pending', label: 'Order Received', description: 'Your order has been received and is being processed' },
+                { key: 'processing', label: 'Processing', description: 'We are preparing your order' },
+                { key: 'confirmed', label: 'Confirmed', description: 'Your order has been confirmed and is ready for delivery' },
+            ];
+
+            // Add delivery statuses if delivery exists
+            if (orderData.delivery_number) {
+                if (orderData.delivery_status === 'scheduled') {
+                    statuses.push({ key: 'scheduled', label: 'Delivery Scheduled', description: `Scheduled for ${formatDate(orderData.scheduled_date)}` });
+                } else if (orderData.delivery_status === 'in_transit') {
+                    statuses.push({ key: 'in_transit', label: 'In Transit', description: 'Your order is on the way' });
+                } else if (orderData.delivery_status === 'out_for_delivery') {
+                    statuses.push({ key: 'out_for_delivery', label: 'Out for Delivery', description: 'Your order will arrive soon' });
+                } else if (orderData.delivery_status === 'delivered') {
+                    statuses.push({ key: 'delivered', label: 'Delivered', description: `Delivered on ${formatDate(orderData.delivered_at)}` });
+                }
+            }
+
+            // Determine current status
+            const currentOrderStatus = orderData.order_status;
+            const currentDeliveryStatus = orderData.delivery_status;
+
+            let html = '';
+            statuses.forEach((status, index) => {
+                let statusClass = '';
+                
+                if (status.key === currentOrderStatus || status.key === currentDeliveryStatus) {
+                    statusClass = 'active';
+                } else if (index < statuses.findIndex(s => s.key === currentOrderStatus || s.key === currentDeliveryStatus)) {
+                    statusClass = 'completed';
+                }
+
+                html += `
+                    <div class="timeline-item ${statusClass}">
+                        <div class="timeline-dot">
+                            ${statusClass === 'completed' ? '✓' : ''}
+                        </div>
+                        <div class="timeline-content">
+                            <h3>${status.label}</h3>
+                            <p>${status.description}</p>
+                        </div>
+                    </div>
+                `;
+            });
+
+            return html;
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            document.getElementById('errorText').textContent = message;
+            errorDiv.classList.add('active');
+            
+            setTimeout(() => {
+                errorDiv.classList.remove('active');
+            }, 5000);
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-KE', { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        function formatDateTime(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString('en-KE', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function formatStatus(status) {
+            return status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+    </script>
+</body>
+</html>
