@@ -1,3 +1,8 @@
+// Startup banner
+console.log('%c🏁 Knight Watts Auto Parts - Storefront Initialized', 'font-size: 14px; font-weight: bold; color: #00A86B');
+console.log('%c🔄 Service Worker Cache Version: v1.0.1', 'color: #666');
+console.log('%c📦 Loading products from Supabase backend...', 'color: #666');
+
 // Verify Three.js is loaded
 if (typeof THREE === 'undefined') {
     console.error('Three.js library failed to load! Products will not display correctly.');
@@ -260,21 +265,28 @@ function getProductImageUrl(imagePath) {
 // Load products from backend (PR #9's approach, enhanced with image URL generation)
 async function loadProductsFromBackend() {
     try {
+        // Wait for backend integration to initialize
+        if (window.backendIntegration && typeof window.backendIntegration.waitForInit === 'function') {
+            console.log('[Product Loader] Waiting for backend initialization...');
+            await window.backendIntegration.waitForInit();
+        }
+        
         // Check if backend integration is available
         if (typeof window.backendIntegration === 'undefined' || !window.backendIntegration.isEnabled()) {
-            console.log('Backend not available - using hardcoded products');
+            console.warn('[Product Loader] Backend not available - using hardcoded products');
             return;
         }
         
         // Fetch active products from Supabase
+        console.log('[Product Loader] Fetching products from backend...');
         const result = await window.backendIntegration.getProducts();
         
         if (!result.success || !result.products || result.products.length === 0) {
-            console.log('No products from backend - using hardcoded products');
+            console.warn('[Product Loader] No products from backend - using hardcoded products', result);
             return;
         }
         
-        console.log(`Loaded ${result.products.length} products from Supabase`);
+        console.log(`[Product Loader] Loaded ${result.products.length} products from Supabase`);
         
         // Map Supabase products to expected format
         const mappedProducts = result.products.map(dbProduct => {
@@ -328,10 +340,20 @@ async function loadProductsFromBackend() {
         products.length = 0;
         products.push(...mappedProducts);
         
-        console.log('Products loaded and mapped successfully');
+        console.log('[Product Loader] Products loaded and mapped successfully. Total products:', products.length);
+        
+        // Log first product for debugging
+        if (products.length > 0) {
+            console.log('[Product Loader] Sample product:', {
+                id: products[0].id,
+                name: products[0].name,
+                price: products[0].price,
+                stock: products[0].locations
+            });
+        }
     } catch (error) {
-        console.error('Error loading products from backend:', error);
-        console.log('Falling back to hardcoded products');
+        console.error('[Product Loader] Error loading products from backend:', error);
+        console.warn('[Product Loader] Falling back to hardcoded products');
     }
 }
 
@@ -369,13 +391,22 @@ function extractMakeFromName(name) {
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log('[App Init] DOMContentLoaded fired, starting initialization...');
+    
     await initializeSupabase(); // Initialize Supabase for image URLs
+    console.log('[App Init] Supabase client ready');
+    
     initializeLocation();
+    
     await loadProductsFromBackend(); // Load products using PR #9's approach
+    console.log('[App Init] Products loaded, rendering...');
+    
     renderProducts();
     attachEventListeners();
     updateCartDisplay();
     initNavigation();
+    
+    console.log('[App Init] ✅ Initialization complete');
 });
 
 // Location Management
@@ -405,13 +436,18 @@ function selectLocation(location) {
 
 // Product Rendering
 function renderProducts(filteredProducts = null) {
-    console.log('renderProducts called', filteredProducts ? `with ${filteredProducts.length} filtered products` : `with all ${products.length} products`);
+    const productsToRender = filteredProducts || products;
+    console.log('[Product Renderer] Rendering products:', {
+        filtered: !!filteredProducts,
+        count: productsToRender.length,
+        source: productsToRender.length > 0 && productsToRender[0].imageUrl ? 'database' : 'hardcoded'
+    });
+    
     const grid = document.getElementById('productsGrid');
     if (!grid) {
-        console.error('Products grid element not found!');
+        console.error('[Product Renderer] Products grid element not found!');
         return;
     }
-    const productsToRender = filteredProducts || products;
     
     grid.innerHTML = productsToRender.map(product => {
         const locationStock = currentLocation ? 
