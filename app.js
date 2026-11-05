@@ -1,7 +1,8 @@
 // Startup banner
 console.log('%c🏁 Knight Watts Auto Parts - Storefront Initialized', 'font-size: 14px; font-weight: bold; color: #00A86B');
-console.log('%c🔄 Service Worker Cache Version: v1.0.2', 'color: #666');
+console.log('%c🔄 Service Worker Cache Version: v1.0.3', 'color: #666');
 console.log('%c📍 Location Filter: Shows actual product locations, not filter location', 'color: #666');
+console.log('%c🎨 3D Viewer: Now displays product images instead of placeholder boxes', 'color: #666');
 console.log('%c📦 Loading products from Supabase backend...', 'color: #666');
 
 // Verify Three.js is loaded
@@ -759,32 +760,89 @@ function init3DViewer() {
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
     
-    // Create more detailed 3D model
-    const geometry = new THREE.BoxGeometry(2, 1.5, 1);
-    const material = new THREE.MeshStandardMaterial({ 
-        color: 0x00A86B,
-        metalness: 0.6,
-        roughness: 0.4
-    });
-    currentMesh = new THREE.Mesh(geometry, material);
-    scene.add(currentMesh);
+    // Check if product has an image - if so, display it as a textured 3D plane
+    if (selectedProduct && selectedProduct.imageUrl) {
+        console.log('[3D Viewer] Loading product image:', selectedProduct.imageUrl);
+        
+        // Create a textured plane to display the product image in 3D space
+        const textureLoader = new THREE.TextureLoader();
+        textureLoader.load(
+            selectedProduct.imageUrl,
+            (texture) => {
+                // Calculate plane size based on image aspect ratio
+                const aspectRatio = texture.image.width / texture.image.height;
+                const planeWidth = aspectRatio > 1 ? 3 : 2;
+                const planeHeight = planeWidth / aspectRatio;
+                
+                // Create plane geometry for the image
+                const planeGeometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
+                const planeMaterial = new THREE.MeshStandardMaterial({ 
+                    map: texture,
+                    side: THREE.DoubleSide,
+                    metalness: 0.2,
+                    roughness: 0.8
+                });
+                
+                currentMesh = new THREE.Mesh(planeGeometry, planeMaterial);
+                scene.add(currentMesh);
+                
+                // Add a subtle frame/border effect
+                const frameGeometry = new THREE.PlaneGeometry(planeWidth + 0.2, planeHeight + 0.2);
+                const frameMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0xADB5BD,
+                    side: THREE.DoubleSide,
+                    metalness: 0.6,
+                    roughness: 0.4
+                });
+                const frame = new THREE.Mesh(frameGeometry, frameMaterial);
+                frame.position.z = -0.01;
+                currentMesh.add(frame);
+                
+                console.log('[3D Viewer] Product image loaded successfully');
+            },
+            undefined,
+            (error) => {
+                console.error('[3D Viewer] Failed to load product image:', error);
+                // Fall back to placeholder if image fails to load
+                createPlaceholderMesh();
+            }
+        );
+    } else {
+        console.log('[3D Viewer] No product image, using styled placeholder');
+        createPlaceholderMesh();
+    }
     
-    // Add edges
-    const edges = new THREE.EdgesGeometry(geometry);
-    const edgeMaterial = new THREE.LineBasicMaterial({ color: 0x00D084, linewidth: 2 });
-    const edgeLines = new THREE.LineSegments(edges, edgeMaterial);
-    currentMesh.add(edgeLines);
-    
-    // Add smaller detail boxes
-    const detailGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-    const detailMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0xFF6B35,
-        metalness: 0.7,
-        roughness: 0.3
-    });
-    const detail = new THREE.Mesh(detailGeometry, detailMaterial);
-    detail.position.set(0.8, 0.5, 0);
-    currentMesh.add(detail);
+    // Helper function to create a better-styled placeholder
+    function createPlaceholderMesh() {
+        // Create a product-like 3D shape (rounded box for generic part)
+        const geometry = new THREE.BoxGeometry(2, 1.5, 1);
+        const material = new THREE.MeshStandardMaterial({ 
+            color: 0x495057,
+            metalness: 0.7,
+            roughness: 0.3
+        });
+        currentMesh = new THREE.Mesh(geometry, material);
+        scene.add(currentMesh);
+        
+        // Add edges for definition
+        const edges = new THREE.EdgesGeometry(geometry);
+        const edgeMaterial = new THREE.LineBasicMaterial({ color: 0xADB5BD, linewidth: 2 });
+        const edgeLines = new THREE.LineSegments(edges, edgeMaterial);
+        currentMesh.add(edgeLines);
+        
+        // Add product name text if available (as a visual label)
+        if (selectedProduct) {
+            const labelGeometry = new THREE.BoxGeometry(1.5, 0.3, 0.05);
+            const labelMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x00A86B,
+                metalness: 0.5,
+                roughness: 0.5
+            });
+            const label = new THREE.Mesh(labelGeometry, labelMaterial);
+            label.position.set(0, 1.2, 0);
+            currentMesh.add(label);
+        }
+    }
     
     // Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
