@@ -485,6 +485,7 @@ function renderProductsTable(products) {
         <table class="data-table">
             <thead>
                 <tr>
+                    <th>Image</th>
                     <th>Name</th>
                     <th>Category</th>
                     <th>Price (KES)</th>
@@ -495,8 +496,17 @@ function renderProductsTable(products) {
                 </tr>
             </thead>
             <tbody>
-                ${products.map(product => `
+                ${products.map(product => {
+                    const imageUrl = product.primary_image_path ? 
+                        getProductImageUrl(product.primary_image_path) : null;
+                    return `
                     <tr>
+                        <td>
+                            ${imageUrl ? 
+                                `<img src="${imageUrl}" alt="${product.name}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color);">` : 
+                                '<div style="width: 60px; height: 60px; background: var(--surface-color); border-radius: 4px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); font-size: 24px;">📦</div>'
+                            }
+                        </td>
                         <td><strong>${product.name}</strong></td>
                         <td>${product.category}</td>
                         <td>KES ${formatCurrency(product.price_kes)}</td>
@@ -510,12 +520,21 @@ function renderProductsTable(products) {
                             <button class="action-btn action-btn-secondary" onclick="editProduct('${product.id}')">Edit</button>
                         </td>
                     </tr>
-                `).join('')}
+                `;
+                }).join('')}
             </tbody>
         </table>
     `;
     
     container.innerHTML = html;
+}
+
+function getProductImageUrl(imagePath) {
+    if (!imagePath) return null;
+    const { url } = supabaseClient.storage
+        .from('products')
+        .getPublicUrl(imagePath);
+    return url;
 }
 
 // Orders Page
@@ -1390,7 +1409,14 @@ async function editProduct(id) {
                             
                             <div class="form-group">
                                 <label>Product Image</label>
-                                ${product.primary_image_path ? `<div style="margin-bottom: 8px; color: var(--text-muted);">Current: ${product.primary_image_path.split('/').pop()}</div>` : ''}
+                                ${product.primary_image_path ? `
+                                    <div style="margin-bottom: 8px;">
+                                        <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 4px;">Current image:</div>
+                                        <img src="${getProductImageUrl(product.primary_image_path)}" 
+                                             alt="Current product image" 
+                                             style="max-width: 200px; max-height: 200px; border-radius: 4px; border: 1px solid var(--border-color);">
+                                    </div>
+                                ` : ''}
                                 <input type="file" id="productImage" accept="image/*" onchange="handleImageSelect(event)">
                                 <small style="color: var(--text-muted);">Upload new image to replace current (or leave empty to keep existing)</small>
                                 <div id="imagePreview" style="margin-top: 8px;"></div>

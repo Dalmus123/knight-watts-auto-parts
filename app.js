@@ -8,8 +8,9 @@ let currentLocation = localStorage.getItem('selectedLocation') || null;
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
 let scene, camera, renderer, currentMesh;
 let selectedProduct = null;
+let supabaseClient = null;
 
-// Product Database - Sample car spare parts
+// Product Database - Sample car spare parts (fallback)
 const products = [
     {
         id: 1,
@@ -234,7 +235,29 @@ const products = [
     }
 ];
 
-// Load products from Supabase backend
+// Initialize Supabase client for image URL generation
+async function initializeSupabase() {
+    if (typeof initSupabase === 'function' && typeof isConfigured === 'function' && isConfigured()) {
+        supabaseClient = initSupabase();
+        console.log('Supabase client initialized for image URLs');
+    }
+}
+
+// Helper function to get Storage public URL for images
+function getProductImageUrl(imagePath) {
+    if (!imagePath || !supabaseClient) return null;
+    try {
+        const { data } = supabaseClient.storage
+            .from('products')
+            .getPublicUrl(imagePath);
+        return data?.publicUrl || null;
+    } catch (error) {
+        console.error('Error generating image URL:', error);
+        return null;
+    }
+}
+
+// Load products from backend (PR #9's approach, enhanced with image URL generation)
 async function loadProductsFromBackend() {
     try {
         // Check if backend integration is available
@@ -281,6 +304,12 @@ async function loadProductsFromBackend() {
             if (dbProduct.sku) specs['SKU'] = dbProduct.sku;
             specs['Category'] = dbProduct.category || 'General';
             
+            // Generate proper image URL from primary_image_path using Storage
+            let imageUrl = null;
+            if (dbProduct.primary_image_path) {
+                imageUrl = getProductImageUrl(dbProduct.primary_image_path);
+            }
+            
             return {
                 id: dbProduct.id,
                 name: dbProduct.name,
@@ -290,7 +319,7 @@ async function loadProductsFromBackend() {
                 description: dbProduct.description || 'Quality auto part for your vehicle.',
                 locations: locations,
                 specs: specs,
-                imageUrl: dbProduct.image_url || null,
+                imageUrl: imageUrl,
                 featured: dbProduct.featured || false
             };
         });
@@ -340,8 +369,9 @@ function extractMakeFromName(name) {
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', async () => {
+    await initializeSupabase(); // Initialize Supabase for image URLs
     initializeLocation();
-    await loadProductsFromBackend();
+    await loadProductsFromBackend(); // Load products using PR #9's approach
     renderProducts();
     attachEventListeners();
     updateCartDisplay();
@@ -393,33 +423,37 @@ function renderProducts(filteredProducts = null) {
         const stockText = !locationStock.available ? 'Out of Stock' : 
                          locationStock.stock < 5 ? `Low Stock (${locationStock.stock})` : 'In Stock';
         
-        // Determine if we have an image or should use 3D
+        const description = product.description || 'Quality auto part';
+        
+        // Determine if we have an image or should use 3D preview
         const hasImage = product.imageUrl && product.imageUrl.trim() !== '';
-        const imageContent = hasImage 
-            ? `<img src="${product.imageUrl}" alt="${product.name}" style="width: 100%; height: 220px; object-fit: cover;" onerror="this.style.display='none'; document.getElementById('preview-${product.id}').style.display='block';">`
-            : '';
-        const canvasDisplay = hasImage ? 'style="display: none;"' : '';
         
         return `
-            <div class="product-card" onclick="openProductViewer('${product.id}')">
-                <div class="product-image">
-                    ${imageContent}
-                    <canvas id="preview-${product.id}" width="280" height="220" ${canvasDisplay}></canvas>
+            <div class="product-card" onclick="openProductViewer('${product.id}')" ${hasImage ? 'data-product-id="' + product.id + '"' : ''}>
+                <div class="product-image ${hasImage ? 'product-image-3d' : ''}" ${hasImage ? 'data-image-id="' + product.id + '"' : ''}>
+                    ${hasImage ? 
+                        `<div class="product-3d-wrapper">
+                            <img src="${product.imageUrl}" alt="${product.name}" class="product-2d-image" onerror="this.style.display='none'; this.parentElement.parentElement.querySelector('canvas').style.display='block';" />
+                            <div class="product-3d-overlay"></div>
+                        </div>
+                        <canvas id="preview-${product.id}" width="280" height="220" style="display: none;"></canvas>` :
+                        `<canvas id="preview-${product.id}" width="280" height="220"></canvas>`
+                    }
                     <div class="view-3d-badge">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
                             <path d="M2 17l10 5 10-5"></path>
                             <path d="M2 12l10 5 10-5"></path>
                         </svg>
-                        ${hasImage ? 'View Details' : 'View in 3D'}
+                        ${hasImage ? 'Interactive View' : 'View in 3D'}
                     </div>
                 </div>
                 <div class="product-info">
                     <div class="product-category">${getCategoryName(product.category)}</div>
                     <h3 class="product-name">${product.name}</h3>
-                    <p class="product-description">${product.description.substring(0, 80)}...</p>
+                    <p class="product-description">${description.substring(0, 80)}...</p>
                     <div class="product-meta">
-                        <div class="product-price">KSh ${product.price.toLocaleString()}</div>
+                        <div class="product-price">KSh ${parseFloat(product.price).toLocaleString()}</div>
                         <div class="product-location">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
@@ -434,11 +468,81 @@ function renderProducts(filteredProducts = null) {
         `;
     }).join('');
     
-    // Initialize 3D previews for each product (only if no image)
+    // Initialize 3D effects for each product
     productsToRender.forEach(product => {
-        if (!product.imageUrl || product.imageUrl.trim() === '') {
+        const hasImage = product.imageUrl && product.imageUrl.trim() !== '';
+        
+        if (hasImage) {
+            // Add 3D tilt effect to images
+            setTimeout(() => init3DTiltEffect(product.id), 100);
+        } else {
+            // Render Three.js preview for products without images
             setTimeout(() => renderProductPreview(product.id), 100);
         }
+    });
+}
+
+// 3D Tilt Effect for 2D Images (new feature)
+function init3DTiltEffect(productId) {
+    const productCard = document.querySelector(`[data-image-id="${productId}"]`);
+    if (!productCard) return;
+    
+    const wrapper = productCard.querySelector('.product-3d-wrapper');
+    if (!wrapper) return;
+    
+    // Add mouse move listener for tilt effect
+    productCard.addEventListener('mousemove', (e) => {
+        const rect = productCard.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        
+        const percentX = (x - centerX) / centerX;
+        const percentY = (y - centerY) / centerY;
+        
+        const rotateY = percentX * 15; // Max 15 degrees
+        const rotateX = -percentY * 15; // Max 15 degrees (negative for natural tilt)
+        
+        wrapper.style.transform = `
+            perspective(1000px) 
+            rotateX(${rotateX}deg) 
+            rotateY(${rotateY}deg) 
+            scale3d(1.05, 1.05, 1.05)
+        `;
+    });
+    
+    productCard.addEventListener('mouseleave', () => {
+        wrapper.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
+    });
+    
+    // Add touch support for mobile
+    productCard.addEventListener('touchmove', (e) => {
+        const touch = e.touches[0];
+        const rect = productCard.getBoundingClientRect();
+        const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+        
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        
+        const percentX = (x - centerX) / centerX;
+        const percentY = (y - centerY) / centerY;
+        
+        const rotateY = percentX * 10;
+        const rotateX = -percentY * 10;
+        
+        wrapper.style.transform = `
+            perspective(1000px) 
+            rotateX(${rotateX}deg) 
+            rotateY(${rotateY}deg) 
+            scale3d(1.03, 1.03, 1.03)
+        `;
+    });
+    
+    productCard.addEventListener('touchend', () => {
+        wrapper.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
     });
 }
 
@@ -730,6 +834,11 @@ function addToCart() {
     
     localStorage.setItem('cart', JSON.stringify(cart));
     updateCartDisplay();
+    
+    // Track add to cart if backend available
+    if (typeof trackAddToCart === 'function') {
+        trackAddToCart(selectedProduct.id, selectedProduct.name, 1);
+    }
     
     // Show success feedback
     alert(`${selectedProduct.name} added to cart!`);
