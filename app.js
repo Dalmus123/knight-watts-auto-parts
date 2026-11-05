@@ -1,6 +1,7 @@
 // Startup banner
 console.log('%c🏁 Knight Watts Auto Parts - Storefront Initialized', 'font-size: 14px; font-weight: bold; color: #00A86B');
-console.log('%c🔄 Service Worker Cache Version: v1.0.1', 'color: #666');
+console.log('%c🔄 Service Worker Cache Version: v1.0.2', 'color: #666');
+console.log('%c📍 Location Filter: Shows actual product locations, not filter location', 'color: #666');
 console.log('%c📦 Loading products from Supabase backend...', 'color: #666');
 
 // Verify Three.js is loaded
@@ -411,9 +412,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Location Management
 function initializeLocation() {
+    const locationBtn = document.getElementById('currentLocation');
     if (currentLocation) {
-        document.getElementById('currentLocation').textContent = 
-            currentLocation.charAt(0).toUpperCase() + currentLocation.slice(1);
+        locationBtn.textContent = currentLocation.charAt(0).toUpperCase() + currentLocation.slice(1);
+        locationBtn.style.fontWeight = 'bold';
+        locationBtn.parentElement.style.backgroundColor = '#00A86B';
+    } else {
+        locationBtn.textContent = 'All Locations';
+        locationBtn.parentElement.style.backgroundColor = '';
     }
 }
 
@@ -425,13 +431,30 @@ function closeLocationModal() {
     document.getElementById('locationModal').classList.remove('active');
 }
 
+function clearLocationFilter() {
+    currentLocation = null;
+    localStorage.removeItem('selectedLocation');
+    const locationBtn = document.getElementById('currentLocation');
+    locationBtn.textContent = 'All Locations';
+    locationBtn.style.fontWeight = '';
+    locationBtn.parentElement.style.backgroundColor = '';
+    closeLocationModal();
+    renderProducts();
+    
+    console.log('[Location Filter] Cleared - showing all locations');
+}
+
 function selectLocation(location) {
     currentLocation = location;
     localStorage.setItem('selectedLocation', location);
-    document.getElementById('currentLocation').textContent = 
-        location.charAt(0).toUpperCase() + location.slice(1);
+    const locationBtn = document.getElementById('currentLocation');
+    locationBtn.textContent = location.charAt(0).toUpperCase() + location.slice(1);
+    locationBtn.style.fontWeight = 'bold';
+    locationBtn.parentElement.style.backgroundColor = '#00A86B';
     closeLocationModal();
     renderProducts();
+    
+    console.log(`[Location Filter] Set to: ${location}`);
 }
 
 // Product Rendering
@@ -450,14 +473,37 @@ function renderProducts(filteredProducts = null) {
     }
     
     grid.innerHTML = productsToRender.map(product => {
+        // Determine actual product location(s) where it has stock
+        const actualLocations = [];
+        if (product.locations.embu.stock > 0) actualLocations.push('embu');
+        if (product.locations.garissa.stock > 0) actualLocations.push('garissa');
+        
+        // If location filter is active, show that location's stock
+        // If no filter, show the best availability
         const locationStock = currentLocation ? 
             product.locations[currentLocation] : 
-            { stock: Math.max(product.locations.embu.stock, product.locations.garissa.stock), available: true };
+            { 
+                stock: Math.max(product.locations.embu.stock, product.locations.garissa.stock), 
+                available: actualLocations.length > 0 
+            };
         
         const stockStatus = !locationStock.available ? 'out-of-stock' : 
                            locationStock.stock < 5 ? 'low-stock' : 'in-stock';
-        const stockText = !locationStock.available ? 'Out of Stock' : 
-                         locationStock.stock < 5 ? `Low Stock (${locationStock.stock})` : 'In Stock';
+        
+        // Smart stock text that shows actual availability
+        let stockText;
+        if (currentLocation && !locationStock.available && actualLocations.length > 0) {
+            // Product is out of stock in selected location but available elsewhere
+            const otherLocation = actualLocations[0];
+            const otherStock = product.locations[otherLocation].stock;
+            stockText = `Available in ${otherLocation.charAt(0).toUpperCase() + otherLocation.slice(1)} (${otherStock})`;
+        } else if (!locationStock.available) {
+            stockText = 'Out of Stock';
+        } else if (locationStock.stock < 5) {
+            stockText = `Low Stock (${locationStock.stock})`;
+        } else {
+            stockText = `In Stock (${locationStock.stock})`;
+        }
         
         const description = product.description || 'Quality auto part';
         
@@ -495,7 +541,9 @@ function renderProducts(filteredProducts = null) {
                                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                                 <circle cx="12" cy="10" r="3"></circle>
                             </svg>
-                            ${currentLocation ? currentLocation.charAt(0).toUpperCase() + currentLocation.slice(1) : 'Both'}
+                            ${actualLocations.length === 2 ? 'Both Locations' : 
+                              actualLocations.length === 1 ? actualLocations[0].charAt(0).toUpperCase() + actualLocations[0].slice(1) : 
+                              'No Stock'}
                         </div>
                     </div>
                     <span class="stock-badge ${stockStatus}">${stockText}</span>
