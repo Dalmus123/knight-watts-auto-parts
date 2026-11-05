@@ -1209,13 +1209,419 @@ function showSuccess(message) {
     alert('Success: ' + message);
 }
 
-// Placeholder functions for actions (to be implemented)
+// Product Management Functions
+let currentEditingProductId = null;
+let selectedImageFile = null;
+
 function openAddProductModal() {
-    showError('Product upload feature coming soon. Use Supabase Dashboard for now.');
+    currentEditingProductId = null;
+    selectedImageFile = null;
+    
+    const modalHTML = `
+        <div id="productModal" class="modal-overlay" onclick="closeModalOnOutsideClick(event)">
+            <div class="modal-content" style="max-width: 700px;">
+                <div class="modal-header">
+                    <h2>Add New Product</h2>
+                    <button onclick="closeProductModal()" class="modal-close">&times;</button>
+                </div>
+                <form id="productForm" onsubmit="saveProduct(event)">
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label>Product Name *</label>
+                            <input type="text" id="productName" required>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Category *</label>
+                                <input type="text" id="productCategory" placeholder="e.g., Brake Pads, Filters" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Location *</label>
+                                <input type="text" id="productLocation" placeholder="e.g., Embu, Garissa" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Price (KES) *</label>
+                                <input type="number" id="productPrice" step="0.01" min="0" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Stock Quantity *</label>
+                                <input type="number" id="productStock" min="0" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea id="productDescription" rows="3" placeholder="Product description..."></textarea>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>SKU</label>
+                                <input type="text" id="productSKU" placeholder="e.g., BP-001">
+                            </div>
+                            <div class="form-group">
+                                <label>Low Stock Threshold</label>
+                                <input type="number" id="productLowStock" min="0" value="5">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Product Image</label>
+                            <input type="file" id="productImage" accept="image/*" onchange="handleImageSelect(event)">
+                            <small style="color: var(--text-muted);">Uploaded to Supabase Storage (products bucket)</small>
+                            <div id="imagePreview" style="margin-top: 8px;"></div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Manufacturer</label>
+                                <input type="text" id="productManufacturer" placeholder="e.g., Bosch, Denso">
+                            </div>
+                            <div class="form-group">
+                                <label>Part Number</label>
+                                <input type="text" id="productPartNumber">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="checkbox" id="productActive" checked style="margin-right: 8px;">
+                                <span>Product is Active (visible to customers)</span>
+                            </label>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="checkbox" id="productFeatured" style="margin-right: 8px;">
+                                <span>Featured Product</span>
+                            </label>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="checkbox" id="product3DModel" style="margin-right: 8px;">
+                                <span>Has 3D Model (available for print-on-demand)</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-footer">
+                        <button type="button" onclick="closeProductModal()" class="btn btn-outline">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="saveProductBtn">
+                            <span id="saveProductBtnText">Save Product</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
 }
 
-function editProduct(id) {
-    showError('Edit feature coming soon. Use Supabase Dashboard for now.');
+async function editProduct(id) {
+    try {
+        const { data: product, error } = await supabase
+            .from('products')
+            .select('*')
+            .eq('id', id)
+            .single();
+        
+        if (error) throw error;
+        
+        currentEditingProductId = id;
+        selectedImageFile = null;
+        
+        const modalHTML = `
+            <div id="productModal" class="modal-overlay" onclick="closeModalOnOutsideClick(event)">
+                <div class="modal-content" style="max-width: 700px;">
+                    <div class="modal-header">
+                        <h2>Edit Product</h2>
+                        <button onclick="closeProductModal()" class="modal-close">&times;</button>
+                    </div>
+                    <form id="productForm" onsubmit="saveProduct(event)">
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label>Product Name *</label>
+                                <input type="text" id="productName" value="${escapeHtml(product.name)}" required>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Category *</label>
+                                    <input type="text" id="productCategory" value="${escapeHtml(product.category)}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Location *</label>
+                                    <input type="text" id="productLocation" value="${escapeHtml(product.location)}" required>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Price (KES) *</label>
+                                    <input type="number" id="productPrice" step="0.01" min="0" value="${product.price_kes}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Stock Quantity *</label>
+                                    <input type="number" id="productStock" min="0" value="${product.stock_quantity}" required>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Description</label>
+                                <textarea id="productDescription" rows="3">${escapeHtml(product.description || '')}</textarea>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>SKU</label>
+                                    <input type="text" id="productSKU" value="${escapeHtml(product.sku || '')}">
+                                </div>
+                                <div class="form-group">
+                                    <label>Low Stock Threshold</label>
+                                    <input type="number" id="productLowStock" min="0" value="${product.low_stock_threshold || 5}">
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Product Image</label>
+                                ${product.primary_image_path ? `<div style="margin-bottom: 8px; color: var(--text-muted);">Current: ${product.primary_image_path.split('/').pop()}</div>` : ''}
+                                <input type="file" id="productImage" accept="image/*" onchange="handleImageSelect(event)">
+                                <small style="color: var(--text-muted);">Upload new image to replace current (or leave empty to keep existing)</small>
+                                <div id="imagePreview" style="margin-top: 8px;"></div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Manufacturer</label>
+                                    <input type="text" id="productManufacturer" value="${escapeHtml(product.manufacturer || '')}">
+                                </div>
+                                <div class="form-group">
+                                    <label>Part Number</label>
+                                    <input type="text" id="productPartNumber" value="${escapeHtml(product.part_number || '')}">
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label style="display: flex; align-items: center; cursor: pointer;">
+                                    <input type="checkbox" id="productActive" ${product.is_active ? 'checked' : ''} style="margin-right: 8px;">
+                                    <span>Product is Active (visible to customers)</span>
+                                </label>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label style="display: flex; align-items: center; cursor: pointer;">
+                                    <input type="checkbox" id="productFeatured" ${product.featured ? 'checked' : ''} style="margin-right: 8px;">
+                                    <span>Featured Product</span>
+                                </label>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label style="display: flex; align-items: center; cursor: pointer;">
+                                    <input type="checkbox" id="product3DModel" ${product.has_3d_model ? 'checked' : ''} style="margin-right: 8px;">
+                                    <span>Has 3D Model (available for print-on-demand)</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="modal-footer">
+                            <button type="button" onclick="confirmDeleteProduct('${id}')" class="btn btn-danger">Delete Product</button>
+                            <div style="flex: 1;"></div>
+                            <button type="button" onclick="closeProductModal()" class="btn btn-outline">Cancel</button>
+                            <button type="submit" class="btn btn-primary" id="saveProductBtn">
+                                <span id="saveProductBtnText">Update Product</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        
+    } catch (error) {
+        console.error('Edit product error:', error);
+        showError('Failed to load product: ' + error.message);
+    }
+}
+
+function handleImageSelect(event) {
+    const file = event.target.files[0];
+    if (!file) {
+        selectedImageFile = null;
+        document.getElementById('imagePreview').innerHTML = '';
+        return;
+    }
+    
+    if (!file.type.startsWith('image/')) {
+        showError('Please select an image file');
+        event.target.value = '';
+        return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) {
+        showError('Image size must be less than 5MB');
+        event.target.value = '';
+        return;
+    }
+    
+    selectedImageFile = file;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        document.getElementById('imagePreview').innerHTML = `
+            <img src="${e.target.result}" style="max-width: 200px; max-height: 200px; border-radius: 4px; border: 1px solid var(--border-color);">
+        `;
+    };
+    reader.readAsDataURL(file);
+}
+
+async function saveProduct(event) {
+    event.preventDefault();
+    
+    const saveBtn = document.getElementById('saveProductBtn');
+    const saveBtnText = document.getElementById('saveProductBtnText');
+    const originalText = saveBtnText.textContent;
+    
+    saveBtn.disabled = true;
+    saveBtnText.textContent = 'Saving...';
+    
+    try {
+        const productData = {
+            name: document.getElementById('productName').value.trim(),
+            category: document.getElementById('productCategory').value.trim(),
+            location: document.getElementById('productLocation').value.trim(),
+            price_kes: parseFloat(document.getElementById('productPrice').value),
+            stock_quantity: parseInt(document.getElementById('productStock').value),
+            description: document.getElementById('productDescription').value.trim() || null,
+            sku: document.getElementById('productSKU').value.trim() || null,
+            low_stock_threshold: parseInt(document.getElementById('productLowStock').value) || 5,
+            manufacturer: document.getElementById('productManufacturer').value.trim() || null,
+            part_number: document.getElementById('productPartNumber').value.trim() || null,
+            is_active: document.getElementById('productActive').checked,
+            featured: document.getElementById('productFeatured').checked,
+            has_3d_model: document.getElementById('product3DModel').checked,
+            created_by: currentUser.id
+        };
+        
+        let productId = currentEditingProductId;
+        
+        if (currentEditingProductId) {
+            saveBtnText.textContent = 'Updating...';
+            const { error } = await supabase
+                .from('products')
+                .update(productData)
+                .eq('id', currentEditingProductId);
+            
+            if (error) throw error;
+        } else {
+            saveBtnText.textContent = 'Creating product...';
+            const { data: newProduct, error } = await supabase
+                .from('products')
+                .insert(productData)
+                .select()
+                .single();
+            
+            if (error) throw error;
+            productId = newProduct.id;
+        }
+        
+        if (selectedImageFile && productId) {
+            saveBtnText.textContent = 'Uploading image...';
+            
+            const fileExt = selectedImageFile.name.split('.').pop();
+            const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+            const filePath = `${productId}/${fileName}`;
+            
+            const { error: uploadError } = await supabase.storage
+                .from('products')
+                .upload(filePath, selectedImageFile, {
+                    cacheControl: '3600',
+                    upsert: false
+                });
+            
+            if (uploadError) throw uploadError;
+            
+            const { error: updateError } = await supabase
+                .from('products')
+                .update({ primary_image_path: filePath })
+                .eq('id', productId);
+            
+            if (updateError) throw updateError;
+        }
+        
+        showSuccess(currentEditingProductId ? 'Product updated successfully' : 'Product created successfully');
+        closeProductModal();
+        await refreshProductsTable();
+        
+    } catch (error) {
+        console.error('Save product error:', error);
+        showError('Failed to save product: ' + error.message);
+        saveBtn.disabled = false;
+        saveBtnText.textContent = originalText;
+    }
+}
+
+async function confirmDeleteProduct(id) {
+    if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        const { data: product } = await supabase
+            .from('products')
+            .select('primary_image_path')
+            .eq('id', id)
+            .single();
+        
+        if (product?.primary_image_path) {
+            await supabase.storage
+                .from('products')
+                .remove([product.primary_image_path]);
+        }
+        
+        const { error } = await supabase
+            .from('products')
+            .delete()
+            .eq('id', id);
+        
+        if (error) throw error;
+        
+        showSuccess('Product deleted successfully');
+        closeProductModal();
+        await refreshProductsTable();
+        
+    } catch (error) {
+        console.error('Delete product error:', error);
+        showError('Failed to delete product: ' + error.message);
+    }
+}
+
+function closeProductModal() {
+    const modal = document.getElementById('productModal');
+    if (modal) {
+        modal.remove();
+    }
+    currentEditingProductId = null;
+    selectedImageFile = null;
+}
+
+function closeModalOnOutsideClick(event) {
+    if (event.target.classList.contains('modal-overlay')) {
+        closeProductModal();
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 function viewOrder(id) {
@@ -1386,3 +1792,8 @@ window.generateDailyReport = generateDailyReport;
 window.viewReport = viewReport;
 window.openAddUserModal = openAddUserModal;
 window.editUser = editUser;
+window.handleImageSelect = handleImageSelect;
+window.saveProduct = saveProduct;
+window.closeProductModal = closeProductModal;
+window.closeModalOnOutsideClick = closeModalOnOutsideClick;
+window.confirmDeleteProduct = confirmDeleteProduct;
