@@ -20,9 +20,8 @@ GRANT EXECUTE ON FUNCTION get_rate_limit_status(TEXT, INET, INTEGER) TO service_
 -- 2. HARDEN get_user_role FUNCTION
 -- ==============================================
 
--- Drop and recreate with security improvements
-DROP FUNCTION IF EXISTS get_user_role(UUID);
-
+-- Recreate with security improvements (keeping same signature for RLS policies)
+-- DO NOT DROP - RLS policies depend on this function
 CREATE OR REPLACE FUNCTION get_user_role(user_id UUID)
 RETURNS user_role 
 SECURITY DEFINER
@@ -34,7 +33,8 @@ DECLARE
 BEGIN
     -- Check if caller is authenticated
     IF auth.uid() IS NULL THEN
-        -- Not authenticated - deny access
+        -- Not authenticated - allow for public RLS policies
+        -- Return NULL so RLS policies can handle anon access appropriately
         RETURN NULL;
     END IF;
     
@@ -58,9 +58,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Ensure only authenticated users can call this
-REVOKE EXECUTE ON FUNCTION get_user_role(UUID) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION get_user_role(UUID) TO authenticated;
+-- Keep EXECUTE grants for anon/PUBLIC
+-- Many RLS policies are TO public and call this function
+-- The function safely returns NULL for anon users, letting RLS policies handle access
+-- DO NOT REVOKE from anon - it would break public storefront reads and order inserts
 
 -- ==============================================
 -- 3. FIX CONCURRENCY IN check_rate_limit
@@ -76,16 +77,15 @@ BEGIN
         WHERE conname = 'rate_limit_log_unique_window'
     ) THEN
         -- Add unique constraint on endpoint, ip_address, and rounded window_start
-        -- We round to the nearest minute to group requests in the same window
+        -- We round to the nearest window boundary to group requests in the same window
         ALTER TABLE rate_limit_log
         ADD CONSTRAINT rate_limit_log_unique_window 
         UNIQUE (endpoint, ip_address, window_start);
     END IF;
 END $$;
 
--- Drop and recreate check_rate_limit with proper concurrency handling
-DROP FUNCTION IF EXISTS check_rate_limit(TEXT, INET, INTEGER, INTEGER);
-
+-- Recreate check_rate_limit with proper concurrency handling
+-- DO NOT DROP - using CREATE OR REPLACE to preserve function OID
 CREATE OR REPLACE FUNCTION check_rate_limit(
     p_endpoint TEXT,
     p_ip_address INET,
@@ -108,8 +108,12 @@ BEGIN
     );
     
     -- Round window_start to the start of the current window
-    -- This ensures all requests in the same window share the same timestamp
-    v_window_start := date_trunc('minute', NOW() - ((EXTRACT(EPOCH FROM NOW())::INTEGER % p_window_seconds) || ' seconds')::INTERVAL);
+    -- Works with any p_window_seconds value (not just 60)
+    -- Example: if p_window_seconds=60 and current time is 10:23:45,
+    --          floor(1699182225/60)*60 = 1699182180 (10:23:00)
+    v_window_start := to_timestamp(
+        floor(extract(epoch from NOW()) / p_window_seconds) * p_window_seconds
+    );
     
     -- Try to insert a new rate limit record, or update existing one atomically
     INSERT INTO rate_limit_log (
@@ -150,9 +154,8 @@ GRANT EXECUTE ON FUNCTION check_rate_limit(TEXT, INET, INTEGER, INTEGER) TO serv
 -- 4. FIX record_rate_limit_violation
 -- ==============================================
 
--- Drop and recreate with proper unique constraint handling
-DROP FUNCTION IF EXISTS record_rate_limit_violation(TEXT, INET);
-
+-- Recreate with proper unique constraint handling
+-- DO NOT DROP - using CREATE OR REPLACE to preserve function OID
 CREATE OR REPLACE FUNCTION record_rate_limit_violation(
     p_endpoint TEXT,
     p_ip_address INET
@@ -163,9 +166,12 @@ SET search_path = public
 AS $$
 DECLARE
     v_window_start TIMESTAMPTZ;
+    v_window_seconds INTEGER := 60; -- Default 60 second window
 BEGIN
-    -- Round to current minute for window grouping
-    v_window_start := date_trunc('minute', NOW());
+    -- Round to current window boundary (same as check_rate_limit with 60s window)
+    v_window_start := to_timestamp(
+        floor(extract(epoch from NOW()) / v_window_seconds) * v_window_seconds
+    );
     
     -- Insert or update violation record
     -- Use the same unique constraint as check_rate_limit
@@ -197,8 +203,7 @@ GRANT EXECUTE ON FUNCTION record_rate_limit_violation(TEXT, INET) TO service_rol
 -- ==============================================
 
 -- Recreate for consistency and grant only to service_role
-DROP FUNCTION IF EXISTS get_rate_limit_status(TEXT, INET, INTEGER);
-
+-- DO NOT DROP - using CREATE OR REPLACE to preserve function OID
 CREATE OR REPLACE FUNCTION get_rate_limit_status(
     p_endpoint TEXT,
     p_ip_address INET,
@@ -279,16 +284,16 @@ GRANT EXECUTE ON FUNCTION cleanup_old_rate_limit_logs() TO service_role;
 -- ==============================================
 
 COMMENT ON FUNCTION get_user_role(UUID) IS 
-    'HARDENED: Returns user role. Owners/admins can look up any user. Others can only look up themselves. Anon users denied.';
+    'HARDENED: Returns user role. Owners/admins can look up any user. Others can only look up themselves. Anon users get NULL (safe for RLS policies). EXECUTE kept for anon to prevent breaking public RLS policies.';
 
 COMMENT ON FUNCTION check_rate_limit(TEXT, INET, INTEGER, INTEGER) IS 
-    'HARDENED: Service-role only. Uses pg_advisory_xact_lock and atomic INSERT...ON CONFLICT for concurrency safety. Must be called from Edge Functions.';
+    'HARDENED: Service-role only. Uses pg_advisory_xact_lock and atomic INSERT...ON CONFLICT for concurrency safety. Window alignment works with any p_window_seconds value. Must be called from Edge Functions.';
 
 COMMENT ON FUNCTION record_rate_limit_violation(TEXT, INET) IS 
-    'HARDENED: Service-role only. Properly dedupes using unique constraint. Must be called from Edge Functions.';
+    'HARDENED: Service-role only. Properly dedupes using unique constraint with proper window alignment. Must be called from Edge Functions.';
 
 COMMENT ON FUNCTION get_rate_limit_status(TEXT, INET, INTEGER) IS 
-    'HARDENED: Service-role only. Must be called from Edge Functions.';
+    'HARDENED: Service-role only. Returns current rate limit status for an endpoint+ip. Must be called from Edge Functions.';
 
 COMMENT ON CONSTRAINT rate_limit_log_unique_window ON rate_limit_log IS
     'Ensures atomic operations for rate limiting. One record per endpoint+ip+window.';
@@ -302,9 +307,12 @@ DO $$
 BEGIN
     RAISE NOTICE 'Security hardening applied:';
     RAISE NOTICE '1. Rate limit functions restricted to service_role only';
-    RAISE NOTICE '2. get_user_role hardened - users can only look up own role';
-    RAISE NOTICE '3. check_rate_limit fixed for concurrency with pg_advisory_xact_lock';
-    RAISE NOTICE '4. Unique constraint added: rate_limit_log_unique_window';
-    RAISE NOTICE '5. record_rate_limit_violation properly deduplicates';
-    RAISE NOTICE '6. All SECURITY DEFINER functions have SET search_path = public';
+    RAISE NOTICE '2. get_user_role hardened - users can only look up own role (anon gets NULL)';
+    RAISE NOTICE '3. get_user_role EXECUTE kept for anon (required by public RLS policies)';
+    RAISE NOTICE '4. check_rate_limit fixed for concurrency with pg_advisory_xact_lock';
+    RAISE NOTICE '5. Window alignment works with any p_window_seconds (not hardcoded to 60)';
+    RAISE NOTICE '6. Unique constraint added: rate_limit_log_unique_window';
+    RAISE NOTICE '7. record_rate_limit_violation properly deduplicates';
+    RAISE NOTICE '8. All SECURITY DEFINER functions have SET search_path = public';
+    RAISE NOTICE '9. All functions use CREATE OR REPLACE (preserves RLS policy dependencies)';
 END $$;

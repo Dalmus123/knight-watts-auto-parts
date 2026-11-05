@@ -851,13 +851,15 @@ The system includes comprehensive security hardening to prevent unauthorized acc
 - ✅ `get_user_role()` function hardened with access controls
 - ✅ **Owners and admins** can look up any user's role (for admin dashboard)
 - ✅ **Regular users** can only look up their own role
-- ✅ **Anonymous users** are denied access entirely
-- ✅ Prevents role enumeration attacks
+- ✅ **Anonymous users** receive NULL (safe for RLS policies)
+- ✅ EXECUTE kept for anon (required by public RLS policies for storefront)
+- ✅ Prevents role enumeration while maintaining storefront functionality
 
 #### 3. **Concurrency Safety**
 - ✅ `check_rate_limit()` uses **pg_advisory_xact_lock** for serialization
 - ✅ **Atomic INSERT...ON CONFLICT** prevents race conditions
 - ✅ **Unique constraint** on `(endpoint, ip_address, window_start)` ensures one record per window
+- ✅ **Dynamic window alignment** works with any `p_window_seconds` value (not hardcoded)
 - ✅ Safe under high concurrent load (100+ req/sec per endpoint)
 
 #### 4. **Data Integrity**
