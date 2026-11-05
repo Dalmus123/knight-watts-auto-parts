@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Supabase CDN</title>
+</head>
+<body>
+  <h1>Testing Supabase CDN</h1>
+  <div id="output"></div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const output = document.getElementById('output');
+    output.innerHTML += '<p>window.supabase type: ' + typeof window.supabase + '</p>';
+    output.innerHTML += '<p>global supabase type: ' + typeof supabase + '</p>';
+    output.innerHTML += '<p>supabase === window.supabase: ' + (supabase === window.supabase) + '</p>';
+  </script>
+  <script>
+    try {
+      let supabase = null;
+      output.innerHTML += '<p style="color: green;">✓ Successfully declared let supabase</p>';
+    } catch (e) {
+      output.innerHTML += '<p style="color: red;">✗ Error declaring let supabase: ' + e.message + '</p>';
+    }
+  </script>
+</body>
+</html>
