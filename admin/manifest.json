@@ -2,73 +2,35 @@
   "name": "Knight Watts Admin - JARVIS",
   "short_name": "KW Admin",
   "description": "Knight Watts Auto Parts admin dashboard with JARVIS AI interface for inventory, orders, and 3D print management.",
-  "start_url": "/admin/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#0b0f17",
   "theme_color": "#00A86B",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icon-72x72.png",
-      "sizes": "72x72",
+      "src": "./apple-touch-icon.png",
+      "sizes": "180x180",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/icon-96x96.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icon-128x128.png",
-      "sizes": "128x128",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icon-144x144.png",
-      "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icon-152x152.png",
-      "sizes": "152x152",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icon-192x192.png",
+      "src": "./icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/icon-384x384.png",
-      "sizes": "384x384",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icon-512x512.png",
+      "src": "./icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/screenshot-mobile.png",
-      "sizes": "540x720",
-      "type": "image/png",
-      "form_factor": "narrow"
+      "purpose": "any"
     },
     {
-      "src": "/screenshot-desktop.png",
-      "sizes": "1280x720",
+      "src": "./icon-512x512-maskable.png",
+      "sizes": "512x512",
       "type": "image/png",
-      "form_factor": "wide"
+      "purpose": "maskable"
     }
   ],
   "categories": ["business", "productivity", "utilities"],
@@ -77,34 +39,34 @@
       "name": "Dashboard",
       "short_name": "Dashboard",
       "description": "View dashboard overview",
-      "url": "/admin/index.html#dashboard",
-      "icons": [{ "src": "/icon-96x96.png", "sizes": "96x96" }]
+      "url": "./index.html#dashboard",
+      "icons": [{ "src": "./icon-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "Products",
       "short_name": "Products",
       "description": "Manage products inventory",
-      "url": "/admin/index.html#products",
-      "icons": [{ "src": "/icon-96x96.png", "sizes": "96x96" }]
+      "url": "./index.html#products",
+      "icons": [{ "src": "./icon-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "Orders",
       "short_name": "Orders",
       "description": "View and process orders",
-      "url": "/admin/index.html#orders",
-      "icons": [{ "src": "/icon-96x96.png", "sizes": "96x96" }]
+      "url": "./index.html#orders",
+      "icons": [{ "src": "./icon-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "Print Queue",
       "short_name": "Print",
       "description": "Manage 3D print queue",
-      "url": "/admin/index.html#printqueue",
-      "icons": [{ "src": "/icon-96x96.png", "sizes": "96x96" }]
+      "url": "./index.html#printqueue",
+      "icons": [{ "src": "./icon-192x192.png", "sizes": "192x192" }]
     }
   ],
   "related_applications": [],
   "prefer_related_applications": false,
-  "scope": "/admin/",
+  "scope": "./",
   "dir": "ltr",
   "lang": "en-US"
 }
