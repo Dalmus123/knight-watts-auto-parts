@@ -1231,10 +1231,14 @@ function showSuccess(message) {
 // Product Management Functions
 let currentEditingProductId = null;
 let selectedImageFile = null;
+let selected3DModelFile = null;
+let selectedIOSModelFile = null;
 
 function openAddProductModal() {
     currentEditingProductId = null;
     selectedImageFile = null;
+    selected3DModelFile = null;
+    selectedIOSModelFile = null;
     
     const modalHTML = `
         <div id="productModal" class="modal-overlay" onclick="closeModalOnOutsideClick(event)">
@@ -1322,9 +1326,39 @@ function openAddProductModal() {
                         
                         <div class="form-group">
                             <label style="display: flex; align-items: center; cursor: pointer;">
-                                <input type="checkbox" id="product3DModel" style="margin-right: 8px;">
-                                <span>Has 3D Model (available for print-on-demand)</span>
+                                <input type="checkbox" id="productHas3DModel" style="margin-right: 8px;" onchange="toggle3DModelSection()">
+                                <span>Has 3D Model (enable interactive 3D viewer)</span>
                             </label>
+                        </div>
+                        
+                        <div id="3dModelSection" style="display: none; border-left: 3px solid var(--primary-color); padding-left: 16px; margin-top: 12px;">
+                            <div class="form-group">
+                                <label>3D Model (.glb / .gltf) *</label>
+                                <input type="file" id="product3DModelFile" accept=".glb,.gltf" onchange="handle3DModelSelect(event)">
+                                <small style="color: var(--text-muted); display: block; margin-top: 4px;">
+                                    📦 Required for 3D viewer. Max 10 MB. 
+                                    <a href="https://github.com/KhronosGroup/glTF-Sample-Models" target="_blank" style="color: var(--primary-color);">Get samples</a>
+                                </small>
+                                <div id="modelPreview" style="margin-top: 8px; color: var(--text-muted); font-size: 14px;"></div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>iOS AR Model (.usdz) <em style="color: var(--text-muted); font-weight: normal;">(Optional)</em></label>
+                                <input type="file" id="productIOSModelFile" accept=".usdz" onchange="handleIOSModelSelect(event)">
+                                <small style="color: var(--text-muted); display: block; margin-top: 4px;">
+                                    📱 Enables "View in Your Space" AR on iPhone/iPad. Convert GLB → USDZ with Reality Converter.
+                                </small>
+                                <div id="iosModelPreview" style="margin-top: 8px; color: var(--text-muted); font-size: 14px;"></div>
+                            </div>
+                            
+                            <div style="background: rgba(0, 168, 107, 0.1); border: 1px solid var(--primary-color); border-radius: 4px; padding: 12px; margin-top: 12px;">
+                                <strong style="color: var(--primary-color);">💡 How to create 3D models:</strong>
+                                <ul style="margin: 8px 0 0 20px; font-size: 14px; color: var(--text-muted);">
+                                    <li><strong>Phone scan:</strong> Polycam, Luma AI, RealityScan apps</li>
+                                    <li><strong>AI tools:</strong> Meshy.ai, Luma Genie (image → 3D)</li>
+                                    <li><strong>3D software:</strong> Blender (free), TinkerCAD for parts</li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                     
@@ -1354,6 +1388,8 @@ async function editProduct(id) {
         
         currentEditingProductId = id;
         selectedImageFile = null;
+        selected3DModelFile = null;
+        selectedIOSModelFile = null;
         
         const modalHTML = `
             <div id="productModal" class="modal-overlay" onclick="closeModalOnOutsideClick(event)">
@@ -1449,9 +1485,43 @@ async function editProduct(id) {
                             
                             <div class="form-group">
                                 <label style="display: flex; align-items: center; cursor: pointer;">
-                                    <input type="checkbox" id="product3DModel" ${product.has_3d_model ? 'checked' : ''} style="margin-right: 8px;">
-                                    <span>Has 3D Model (available for print-on-demand)</span>
+                                    <input type="checkbox" id="productHas3DModel" ${product.has_3d_model ? 'checked' : ''} style="margin-right: 8px;" onchange="toggle3DModelSection()">
+                                    <span>Has 3D Model (enable interactive 3D viewer)</span>
                                 </label>
+                            </div>
+                            
+                            <div id="3dModelSection" style="display: ${product.has_3d_model ? 'block' : 'none'}; border-left: 3px solid var(--primary-color); padding-left: 16px; margin-top: 12px;">
+                                ${product.model_path ? `
+                                    <div style="margin-bottom: 12px; padding: 8px; background: var(--surface-color); border-radius: 4px;">
+                                        <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 4px;">Current 3D model:</div>
+                                        <div style="font-family: monospace; font-size: 13px; color: var(--text-color);">📦 ${escapeHtml(product.model_path)}</div>
+                                    </div>
+                                ` : ''}
+                                
+                                <div class="form-group">
+                                    <label>3D Model (.glb / .gltf)</label>
+                                    <input type="file" id="product3DModelFile" accept=".glb,.gltf" onchange="handle3DModelSelect(event)">
+                                    <small style="color: var(--text-muted); display: block; margin-top: 4px;">
+                                        Upload new model to replace current (or leave empty to keep existing). Max 10 MB.
+                                    </small>
+                                    <div id="modelPreview" style="margin-top: 8px; color: var(--text-muted); font-size: 14px;"></div>
+                                </div>
+                                
+                                ${product.model_ios_path ? `
+                                    <div style="margin-bottom: 12px; padding: 8px; background: var(--surface-color); border-radius: 4px;">
+                                        <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 4px;">Current iOS AR model:</div>
+                                        <div style="font-family: monospace; font-size: 13px; color: var(--text-color);">📱 ${escapeHtml(product.model_ios_path)}</div>
+                                    </div>
+                                ` : ''}
+                                
+                                <div class="form-group">
+                                    <label>iOS AR Model (.usdz) <em style="color: var(--text-muted); font-weight: normal;">(Optional)</em></label>
+                                    <input type="file" id="productIOSModelFile" accept=".usdz" onchange="handleIOSModelSelect(event)">
+                                    <small style="color: var(--text-muted); display: block; margin-top: 4px;">
+                                        📱 Enables "View in Your Space" AR on iPhone/iPad.
+                                    </small>
+                                    <div id="iosModelPreview" style="margin-top: 8px; color: var(--text-muted); font-size: 14px;"></div>
+                                </div>
                             </div>
                         </div>
                         
@@ -1507,6 +1577,80 @@ function handleImageSelect(event) {
     reader.readAsDataURL(file);
 }
 
+function handle3DModelSelect(event) {
+    const file = event.target.files[0];
+    const previewEl = document.getElementById('modelPreview');
+    
+    if (!file) {
+        selected3DModelFile = null;
+        previewEl.innerHTML = '';
+        return;
+    }
+    
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['glb', 'gltf'].includes(ext)) {
+        showError('Please select a GLB or GLTF file');
+        event.target.value = '';
+        previewEl.innerHTML = '';
+        return;
+    }
+    
+    if (file.size > 10 * 1024 * 1024) {
+        showError('3D model size must be less than 10MB. Consider optimizing the model.');
+        event.target.value = '';
+        previewEl.innerHTML = '';
+        return;
+    }
+    
+    selected3DModelFile = file;
+    
+    const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+    const sizeWarning = file.size > 5 * 1024 * 1024 ? 
+        ' ⚠️ <span style="color: var(--warning);">Large file - may be slow to load</span>' : 
+        ' ✓ <span style="color: var(--success);">Good size</span>';
+    
+    previewEl.innerHTML = `
+        <div style="padding: 8px; background: var(--surface-color); border-radius: 4px;">
+            📦 <strong>${file.name}</strong> (${sizeMB} MB)${sizeWarning}
+        </div>
+    `;
+}
+
+function handleIOSModelSelect(event) {
+    const file = event.target.files[0];
+    const previewEl = document.getElementById('iosModelPreview');
+    
+    if (!file) {
+        selectedIOSModelFile = null;
+        previewEl.innerHTML = '';
+        return;
+    }
+    
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (ext !== 'usdz') {
+        showError('Please select a USDZ file for iOS AR');
+        event.target.value = '';
+        previewEl.innerHTML = '';
+        return;
+    }
+    
+    if (file.size > 10 * 1024 * 1024) {
+        showError('iOS model size must be less than 10MB');
+        event.target.value = '';
+        previewEl.innerHTML = '';
+        return;
+    }
+    
+    selectedIOSModelFile = file;
+    
+    const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+    previewEl.innerHTML = `
+        <div style="padding: 8px; background: var(--surface-color); border-radius: 4px;">
+            📱 <strong>${file.name}</strong> (${sizeMB} MB) ✓ <span style="color: var(--success);">Ready for iOS AR</span>
+        </div>
+    `;
+}
+
 async function saveProduct(event) {
     event.preventDefault();
     
@@ -1518,6 +1662,16 @@ async function saveProduct(event) {
     saveBtnText.textContent = 'Saving...';
     
     try {
+        const has3DModel = document.getElementById('productHas3DModel').checked;
+        
+        // Validate 3D model if enabled
+        if (has3DModel && !currentEditingProductId && !selected3DModelFile) {
+            showError('Please upload a 3D model file (.glb or .gltf) when enabling 3D model support');
+            saveBtn.disabled = false;
+            saveBtnText.textContent = originalText;
+            return;
+        }
+        
         const productData = {
             name: document.getElementById('productName').value.trim(),
             category: document.getElementById('productCategory').value.trim(),
@@ -1531,7 +1685,7 @@ async function saveProduct(event) {
             part_number: document.getElementById('productPartNumber').value.trim() || null,
             is_active: document.getElementById('productActive').checked,
             featured: document.getElementById('productFeatured').checked,
-            has_3d_model: document.getElementById('product3DModel').checked,
+            has_3d_model: has3DModel,
             created_by: currentUser.id
         };
         
@@ -1576,6 +1730,66 @@ async function saveProduct(event) {
             const { error: updateError } = await supabaseClient
                 .from('products')
                 .update({ primary_image_path: filePath })
+                .eq('id', productId);
+            
+            if (updateError) throw updateError;
+        }
+        
+        // Upload 3D model if provided
+        if (selected3DModelFile && productId) {
+            saveBtnText.textContent = 'Uploading 3D model...';
+            
+            const fileExt = selected3DModelFile.name.split('.').pop();
+            const fileName = `model-${Date.now()}.${fileExt}`;
+            const filePath = `${productId}/${fileName}`;
+            
+            const { error: uploadError } = await supabaseClient.storage
+                .from('products-3d')
+                .upload(filePath, selected3DModelFile, {
+                    cacheControl: '3600',
+                    upsert: false
+                });
+            
+            if (uploadError) {
+                // If bucket doesn't exist, provide helpful error
+                if (uploadError.message?.includes('not found') || uploadError.message?.includes('bucket')) {
+                    throw new Error('Storage bucket "products-3d" not found. Please create it in Supabase Dashboard (see 3D_MODEL_SETUP.md)');
+                }
+                throw uploadError;
+            }
+            
+            const { error: updateError } = await supabaseClient
+                .from('products')
+                .update({ model_path: filePath })
+                .eq('id', productId);
+            
+            if (updateError) throw updateError;
+        }
+        
+        // Upload iOS model if provided
+        if (selectedIOSModelFile && productId) {
+            saveBtnText.textContent = 'Uploading iOS AR model...';
+            
+            const fileName = `model-ios-${Date.now()}.usdz`;
+            const filePath = `${productId}/${fileName}`;
+            
+            const { error: uploadError } = await supabaseClient.storage
+                .from('products-3d')
+                .upload(filePath, selectedIOSModelFile, {
+                    cacheControl: '3600',
+                    upsert: false
+                });
+            
+            if (uploadError) {
+                if (uploadError.message?.includes('not found') || uploadError.message?.includes('bucket')) {
+                    throw new Error('Storage bucket "products-3d" not found. Please create it in Supabase Dashboard (see 3D_MODEL_SETUP.md)');
+                }
+                throw uploadError;
+            }
+            
+            const { error: updateError } = await supabaseClient
+                .from('products')
+                .update({ model_ios_path: filePath })
                 .eq('id', productId);
             
             if (updateError) throw updateError;
@@ -1635,6 +1849,17 @@ function closeProductModal() {
     }
     currentEditingProductId = null;
     selectedImageFile = null;
+    selected3DModelFile = null;
+    selectedIOSModelFile = null;
+}
+
+// Toggle 3D model section visibility
+function toggle3DModelSection() {
+    const checkbox = document.getElementById('productHas3DModel');
+    const section = document.getElementById('3dModelSection');
+    if (checkbox && section) {
+        section.style.display = checkbox.checked ? 'block' : 'none';
+    }
 }
 
 function closeModalOnOutsideClick(event) {
@@ -1819,7 +2044,10 @@ window.viewReport = viewReport;
 window.openAddUserModal = openAddUserModal;
 window.editUser = editUser;
 window.handleImageSelect = handleImageSelect;
+window.handle3DModelSelect = handle3DModelSelect;
+window.handleIOSModelSelect = handleIOSModelSelect;
 window.saveProduct = saveProduct;
 window.closeProductModal = closeProductModal;
 window.closeModalOnOutsideClick = closeModalOnOutsideClick;
 window.confirmDeleteProduct = confirmDeleteProduct;
+window.toggle3DModelSection = toggle3DModelSection;

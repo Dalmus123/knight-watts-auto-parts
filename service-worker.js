@@ -1,27 +1,36 @@
 // Knight Watts Auto Parts - Service Worker
 // Enables offline functionality and app-like experience
+// GitHub Pages compatible, safe with Supabase API calls
 
-const CACHE_NAME = 'knight-watts-v1.0.4';
+const CACHE_NAME = 'knight-watts-v1.0.5';
 const OFFLINE_URL = '/offline.html';
 
-// Files to cache for offline use
+// Get the base path for GitHub Pages (e.g., /knight-watts-auto-parts)
+const BASE_PATH = self.location.pathname.split('/')[1] || '';
+const basePath = BASE_PATH ? `/${BASE_PATH}` : '';
+
+// Files to cache for offline use (static UI only)
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/checkout.html',
-  '/3d-printing.html',
-  '/login.html',
-  '/signup.html',
-  '/styles.css',
-  '/app.js',
-  '/grokbot.js',
-  '/ai-chat-widget.js',
-  '/ai-chat-widget.css',
-  '/3d-print-system.js',
-  '/3d-printing-ui.js',
-  '/manifest.json',
-  '/offline.html'
-];
+  basePath + '/',
+  basePath + '/index.html',
+  basePath + '/checkout.html',
+  basePath + '/3d-printing.html',
+  basePath + '/login.html',
+  basePath + '/signup.html',
+  basePath + '/styles.css',
+  basePath + '/app.js',
+  basePath + '/grokbot.js',
+  basePath + '/ai-chat-widget.js',
+  basePath + '/ai-chat-widget.css',
+  basePath + '/3d-print-system.js',
+  basePath + '/3d-printing-ui.js',
+  basePath + '/manifest.json',
+  basePath + '/offline.html',
+  basePath + '/admin/index.html',
+  basePath + '/admin/admin.js',
+  basePath + '/admin/admin.css',
+  basePath + '/admin/jarvis-theme.css'
+].filter(path => path);
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
@@ -59,58 +68,74 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - serve from cache, fallback to network
 self.addEventListener('fetch', (event) => {
-  // Skip cross-origin requests
-  if (!event.request.url.startsWith(self.location.origin)) {
-    return;
+  const url = new URL(event.request.url);
+  
+  // NEVER cache these (to avoid stale data):
+  // - Supabase API requests
+  // - Storage bucket requests (product images, 3D models)
+  // - External APIs
+  const shouldBypassCache = 
+    url.hostname.includes('supabase') ||
+    url.pathname.includes('/storage/v1/') ||
+    url.pathname.includes('/rest/v1/') ||
+    url.pathname.includes('/auth/v1/') ||
+    url.pathname.includes('/functions/v1/') ||
+    !url.hostname.includes(self.location.hostname);
+  
+  if (shouldBypassCache) {
+    // Always fetch fresh from network for API/storage/external
+    return event.respondWith(fetch(event.request));
   }
-
-  // Skip non-GET requests
+  
+  // Skip non-GET requests (POST, PUT, DELETE, etc.)
   if (event.request.method !== 'GET') {
     return;
   }
 
+  // Cache-first strategy for static assets only
   event.respondWith(
     caches.match(event.request)
       .then((cachedResponse) => {
-        // Return cached version if available
-        if (cachedResponse) {
-          // Update cache in background
-          fetch(event.request)
+        // For HTML pages, use network-first (for admin uploads to work)
+        if (event.request.destination === 'document' || event.request.mode === 'navigate') {
+          return fetch(event.request)
             .then((response) => {
+              // Cache the response
               if (response && response.status === 200) {
+                const responseToCache = response.clone();
                 caches.open(CACHE_NAME)
-                  .then((cache) => cache.put(event.request, response.clone()));
+                  .then((cache) => cache.put(event.request, responseToCache));
               }
+              return response;
             })
-            .catch(() => {}); // Ignore network errors in background
-          
+            .catch(() => {
+              // Fallback to cache if offline
+              if (cachedResponse) {
+                return cachedResponse;
+              }
+              // Show offline page
+              return caches.match(basePath + OFFLINE_URL);
+            });
+        }
+        
+        // For other static assets (CSS, JS), use cache-first
+        if (cachedResponse) {
           return cachedResponse;
         }
 
-        // Fetch from network and cache
+        // Fetch from network if not in cache
         return fetch(event.request)
           .then((response) => {
-            // Don't cache if not successful
-            if (!response || response.status !== 200 || response.type === 'error') {
-              return response;
-            }
-
             // Cache successful responses
-            const responseToCache = response.clone();
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(event.request, responseToCache);
-              });
-
+            if (response && response.status === 200) {
+              const responseToCache = response.clone();
+              caches.open(CACHE_NAME)
+                .then((cache) => cache.put(event.request, responseToCache));
+            }
             return response;
           })
           .catch(() => {
-            // Show offline page for navigation requests
-            if (event.request.mode === 'navigate') {
-              return caches.match(OFFLINE_URL);
-            }
-            
-            // Return generic offline response for other requests
+            // Return generic offline response for failed requests
             return new Response('Offline', {
               status: 503,
               statusText: 'Service Unavailable',
