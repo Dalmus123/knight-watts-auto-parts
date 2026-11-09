@@ -324,6 +324,23 @@ async function loadProductsFromBackend() {
                 imageUrl = getProductImageUrl(dbProduct.primary_image_path);
             }
             
+            // Get 3D model URLs if available
+            let modelUrl = null;
+            let modelIOSUrl = null;
+            if (dbProduct.has_3d_model && dbProduct.model_path) {
+                const { data: modelData } = supabaseClient.storage
+                    .from('products-3d')
+                    .getPublicUrl(dbProduct.model_path);
+                modelUrl = modelData?.publicUrl || null;
+                
+                if (dbProduct.model_ios_path) {
+                    const { data: iosData } = supabaseClient.storage
+                        .from('products-3d')
+                        .getPublicUrl(dbProduct.model_ios_path);
+                    modelIOSUrl = iosData?.publicUrl || null;
+                }
+            }
+            
             return {
                 id: dbProduct.id,
                 name: dbProduct.name,
@@ -334,7 +351,10 @@ async function loadProductsFromBackend() {
                 locations: locations,
                 specs: specs,
                 imageUrl: imageUrl,
-                featured: dbProduct.featured || false
+                featured: dbProduct.featured || false,
+                has3DModel: dbProduct.has_3d_model || false,
+                modelUrl: modelUrl,
+                modelIOSUrl: modelIOSUrl
             };
         });
         
@@ -738,12 +758,99 @@ function openProductViewer(productId) {
 }
 
 function init3DViewer() {
+    const container = document.getElementById('viewer3D');
+    
+    // Check if product has a 3D model file
+    if (selectedProduct && selectedProduct.has3DModel && selectedProduct.modelUrl) {
+        console.log('[3D Viewer] Loading 3D model:', selectedProduct.modelUrl);
+        
+        // Use model-viewer for GLB/GLTF files
+        const arSupport = selectedProduct.modelIOSUrl ? 
+            `ios-src="${selectedProduct.modelIOSUrl}"` : '';
+        
+        container.innerHTML = `
+            <model-viewer
+                id="modelViewer"
+                src="${selectedProduct.modelUrl}"
+                ${arSupport}
+                alt="${selectedProduct.name}"
+                auto-rotate
+                camera-controls
+                shadow-intensity="1"
+                style="width: 100%; height: 100%; background-color: #1E293B;"
+                loading="eager"
+                reveal="auto"
+            >
+                <div class="viewer-loading" slot="poster" style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #1E293B; color: #ADB5BD;">
+                    <div style="text-align: center;">
+                        <div class="loading-spinner"></div>
+                        <div style="margin-top: 16px;">Loading 3D model...</div>
+                    </div>
+                </div>
+                ${selectedProduct.modelIOSUrl ? `
+                    <button slot="ar-button" style="
+                        position: absolute;
+                        bottom: 16px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        background: var(--primary-color);
+                        color: white;
+                        border: none;
+                        padding: 12px 24px;
+                        border-radius: 8px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        box-shadow: 0 4px 12px rgba(0, 168, 107, 0.3);
+                    ">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                            <path d="M2 17l10 5 10-5"></path>
+                            <path d="M2 12l10 5 10-5"></path>
+                        </svg>
+                        View in Your Space
+                    </button>
+                ` : ''}
+            </model-viewer>
+        `;
+        
+        // Add loading and error handlers
+        const modelViewer = document.getElementById('modelViewer');
+        modelViewer.addEventListener('load', () => {
+            console.log('[3D Viewer] Model loaded successfully');
+        });
+        modelViewer.addEventListener('error', (e) => {
+            console.error('[3D Viewer] Failed to load 3D model:', e);
+            showFallbackViewer();
+        });
+        
+        return;
+    }
+    
+    // Fallback to Three.js viewer for products without GLB model
+    showFallbackViewer();
+}
+
+function showFallbackViewer() {
     const canvas = document.getElementById('canvas3D');
     const container = document.getElementById('viewer3D');
     
     // Clean up previous scene
     if (renderer) {
         renderer.dispose();
+    }
+    
+    // Make sure canvas is visible
+    if (canvas) {
+        canvas.style.display = 'block';
+    }
+    
+    // Hide model-viewer if it exists
+    const existingModelViewer = document.getElementById('modelViewer');
+    if (existingModelViewer) {
+        existingModelViewer.remove();
     }
     
     scene = new THREE.Scene();
@@ -923,7 +1030,7 @@ function init3DViewer() {
         requestAnimationFrame(animate);
         
         // Gentle auto-rotation when not dragging
-        if (!isDragging) {
+        if (!isDragging && currentMesh) {
             currentMesh.rotation.y += 0.003;
         }
         
