@@ -840,25 +840,227 @@
     line-height: 1;
 }
 
+/* Mobile Menu Toggle Button */
+.mobile-menu-toggle {
+    display: none;
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 3001;
+    width: 44px;
+    height: 44px;
+    background: var(--dark-card);
+    border: 2px solid var(--primary-color);
+    border-radius: 8px;
+    cursor: pointer;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.3s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.mobile-menu-toggle:hover {
+    background: var(--primary-color);
+    transform: scale(1.05);
+}
+
+.mobile-menu-toggle span {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: var(--primary-color);
+    border-radius: 2px;
+    transition: all 0.3s;
+}
+
+.mobile-menu-toggle:hover span {
+    background: white;
+}
+
+.mobile-menu-toggle.active span:nth-child(1) {
+    transform: rotate(45deg) translate(6px, 6px);
+}
+
+.mobile-menu-toggle.active span:nth-child(2) {
+    opacity: 0;
+}
+
+.mobile-menu-toggle.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(6px, -6px);
+}
+
+/* Mobile Overlay */
+.mobile-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 1999;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.mobile-overlay.active {
+    opacity: 1;
+}
+
+/* iOS Safe Area Support */
+.admin-panel {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+}
+
+.admin-header {
+    padding-top: max(24px, env(safe-area-inset-top));
+}
+
+.content-area {
+    padding-bottom: max(32px, env(safe-area-inset-bottom));
+}
+
 /* Responsive */
 @media (max-width: 968px) {
+    .mobile-menu-toggle {
+        display: flex;
+    }
+    
+    .mobile-overlay {
+        display: block;
+    }
+    
     .admin-sidebar {
         position: fixed;
         left: -280px;
+        top: 0;
         height: 100vh;
         z-index: 2000;
-        transition: left 0.3s;
+        transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 4px 0 30px rgba(0, 0, 0, 0.5);
     }
     
     .admin-sidebar.mobile-open {
         left: 0;
     }
     
+    .admin-header {
+        padding-left: 72px;
+        padding-right: 16px;
+    }
+    
+    .admin-header h1 {
+        font-size: 20px;
+    }
+    
+    .user-info {
+        display: none;
+    }
+    
     .stats-grid {
         grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .stat-card {
+        padding: 20px;
     }
     
     .table-container {
         overflow-x: auto;
+        border-radius: 8px;
+    }
+    
+    .data-table {
+        min-width: 600px;
+    }
+    
+    .content-area {
+        padding: 20px 16px;
+    }
+    
+    .search-filter-bar {
+        flex-direction: column;
+    }
+    
+    .search-box {
+        min-width: 100%;
+    }
+    
+    .filter-select {
+        width: 100%;
+    }
+    
+    .table-header {
+        padding: 16px;
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+    
+    .table-header .btn {
+        width: 100%;
+    }
+    
+    /* Touch-friendly tap targets */
+    .action-btn,
+    .btn {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 12px 16px;
+        font-size: 14px;
+    }
+    
+    .nav-item {
+        padding: 16px 24px;
+        min-height: 56px;
+        font-size: 16px;
+    }
+    
+    .nav-item svg {
+        width: 24px;
+        height: 24px;
+    }
+    
+    /* Modal adjustments for mobile */
+    .modal-overlay {
+        padding: 0;
+        align-items: flex-end;
+    }
+    
+    .modal-content {
+        max-width: 100%;
+        max-height: 90vh;
+        border-radius: 16px 16px 0 0;
+        margin: 0;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .modal-footer {
+        flex-direction: column-reverse;
+    }
+    
+    .modal-footer .btn {
+        width: 100%;
+    }
+    
+    /* Print job cards on mobile */
+    .print-job-header {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .print-job-actions {
+        flex-direction: column;
+    }
+    
+    .print-job-actions .action-btn {
+        width: 100%;
     }
 }

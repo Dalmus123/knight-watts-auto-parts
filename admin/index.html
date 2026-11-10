@@ -63,8 +63,18 @@
     </div>
 
     <div id="adminPanel" class="admin-panel" style="display: none;">
+        <!-- Mobile Menu Toggle -->
+        <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle navigation menu">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        
+        <!-- Mobile Overlay -->
+        <div id="mobileOverlay" class="mobile-overlay"></div>
+        
         <!-- Sidebar -->
-        <aside class="admin-sidebar">
+        <aside class="admin-sidebar" id="adminSidebar">
             <div class="sidebar-header">
                 <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
                     <path d="M20 5L35 15V25L20 35L5 25V15L20 5Z" stroke="#00A86B" stroke-width="2" fill="none"/>

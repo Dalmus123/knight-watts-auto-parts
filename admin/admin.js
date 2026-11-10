@@ -35,6 +35,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Set up event handlers
     setupEventHandlers();
+    
+    // Set up mobile menu
+    setupMobileMenu();
 });
 
 // Auth Functions
@@ -141,6 +144,59 @@ function showAdminPanel() {
     loadPage('dashboard');
 }
 
+// Mobile Menu Setup
+function setupMobileMenu() {
+    const menuToggle = document.getElementById('mobileMenuToggle');
+    const sidebar = document.getElementById('adminSidebar');
+    const overlay = document.getElementById('mobileOverlay');
+    
+    if (!menuToggle || !sidebar || !overlay) return;
+    
+    const closeMobileMenu = () => {
+        menuToggle.classList.remove('active');
+        sidebar.classList.remove('mobile-open');
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+    };
+    
+    const openMobileMenu = () => {
+        menuToggle.classList.add('active');
+        sidebar.classList.add('mobile-open');
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    };
+    
+    menuToggle.addEventListener('click', () => {
+        if (sidebar.classList.contains('mobile-open')) {
+            closeMobileMenu();
+        } else {
+            openMobileMenu();
+        }
+    });
+    
+    overlay.addEventListener('click', closeMobileMenu);
+    
+    // Close menu when nav item is clicked
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            if (window.innerWidth <= 968) {
+                closeMobileMenu();
+            }
+        });
+    });
+    
+    // Close menu on window resize if switching to desktop
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            if (window.innerWidth > 968) {
+                closeMobileMenu();
+            }
+        }, 250);
+    });
+}
+
 // Navigation
 function setupEventHandlers() {
     // Navigation
@@ -231,7 +287,6 @@ async function loadDashboard() {
                 </div>
                 <div class="stat-value" id="totalOrders">-</div>
                 <div class="stat-label">Total Orders</div>
-                <div class="stat-change positive">Loading...</div>
             </div>
             
             <div class="stat-card">
