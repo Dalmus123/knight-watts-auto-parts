@@ -6,11 +6,20 @@
 let supabaseClient = null;
 let currentUser = null;
 let currentUserProfile = null;
+let currentRoute = 'dashboard';
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
+    // Hide both screens initially while checking auth
+    const loginScreen = document.getElementById('loginScreen');
+    const adminPanel = document.getElementById('adminPanel');
+    
+    loginScreen.style.display = 'none';
+    adminPanel.style.display = 'none';
+    
     // Check if Supabase is configured
     if (!isConfigured()) {
+        loginScreen.style.display = 'flex';
         showError('Supabase not configured. Please update supabase/config.js with your project credentials.');
         return;
     }
@@ -19,15 +28,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     supabaseClient = initSupabase();
     
     if (!supabaseClient) {
+        loginScreen.style.display = 'flex';
         showError('Failed to initialize Supabase client. Please check the console for errors.');
         return;
     }
     
     // Check for existing session
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    
-    if (session) {
-        await loadUserProfile(session.user);
+    try {
+        const { data: { session }, error } = await supabaseClient.auth.getSession();
+        
+        if (error) throw error;
+        
+        if (session && session.user) {
+            // User has active session - load profile and show admin panel
+            await loadUserProfile(session.user);
+        } else {
+            // No session - show login screen
+            loginScreen.style.display = 'flex';
+        }
+    } catch (error) {
+        console.error('Auth initialization error:', error);
+        loginScreen.style.display = 'flex';
     }
     
     // Set up auth listeners
@@ -38,7 +59,66 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Set up mobile menu
     setupMobileMenu();
+    
+    // Set up routing
+    setupRouting();
+    
+    // Set up service worker update handling
+    setupServiceWorkerUpdate();
 });
+
+// Service Worker Update Handling
+function setupServiceWorkerUpdate() {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('../service-worker.js').then(registration => {
+            // Check for updates every 60 seconds
+            setInterval(() => {
+                registration.update();
+            }, 60000);
+            
+            // Listen for updates
+            registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                
+                newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        // New service worker available
+                        showUpdateNotification();
+                    }
+                });
+            });
+        });
+        
+        // Handle controller change (when new SW takes over)
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            window.location.reload();
+        });
+    }
+}
+
+function showUpdateNotification() {
+    const notification = document.getElementById('updateNotification');
+    const updateBtn = document.getElementById('updateBtn');
+    const dismissBtn = document.getElementById('dismissUpdateBtn');
+    
+    if (!notification) return;
+    
+    notification.style.display = 'block';
+    
+    updateBtn.onclick = () => {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistration().then(registration => {
+                if (registration && registration.waiting) {
+                    registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                }
+            });
+        }
+    };
+    
+    dismissBtn.onclick = () => {
+        notification.style.display = 'none';
+    };
+}
 
 // Auth Functions
 function setupAuthListeners() {
@@ -140,8 +220,7 @@ function showAdminPanel() {
         el.style.display = currentUserProfile.role === 'owner' ? 'flex' : 'none';
     });
     
-    // Load dashboard
-    loadPage('dashboard');
+    // Don't call loadPage directly - routing will handle it
 }
 
 // Mobile Menu Setup
@@ -195,22 +274,85 @@ function setupMobileMenu() {
             }
         }, 250);
     });
+    
+    // Store for global access
+    window.closeMobileMenu = closeMobileMenu;
+}
+
+// Routing Setup - Hash-based navigation
+function setupRouting() {
+    // Handle back button / popstate
+    window.addEventListener('popstate', (e) => {
+        const route = window.location.hash.slice(2) || 'dashboard'; // Remove #/ prefix
+        navigateToRoute(route, false); // false = don't push history again
+    });
+    
+    // Initial route on load
+    const initialRoute = window.location.hash.slice(2) || 'dashboard';
+    navigateToRoute(initialRoute, false);
+}
+
+// Navigate to a route
+function navigateToRoute(route, pushHistory = true) {
+    currentRoute = route;
+    
+    // Update URL hash
+    if (pushHistory) {
+        window.location.hash = '#/' + route;
+    }
+    
+    // Update active nav item
+    document.querySelectorAll('.nav-item').forEach(item => {
+        if (item.dataset.page === route) {
+            item.classList.add('active');
+        } else {
+            item.classList.remove('active');
+        }
+    });
+    
+    // Update mobile back button visibility
+    updateMobileBackButton(route);
+    
+    // Load the page
+    loadPage(route);
+    
+    // Close mobile menu if open
+    if (window.closeMobileMenu) {
+        window.closeMobileMenu();
+    }
+}
+
+// Update mobile back button
+function updateMobileBackButton(route) {
+    const header = document.querySelector('.admin-header');
+    if (!header) return;
+    
+    // Remove existing back button
+    const existingBack = header.querySelector('.mobile-back-btn');
+    if (existingBack) existingBack.remove();
+    
+    // Add back button on mobile if not on dashboard
+    if (window.innerWidth <= 968 && route !== 'dashboard') {
+        const backBtn = document.createElement('button');
+        backBtn.className = 'mobile-back-btn';
+        backBtn.innerHTML = `
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+        `;
+        backBtn.onclick = () => navigateToRoute('dashboard');
+        header.insertBefore(backBtn, header.firstChild);
+    }
 }
 
 // Navigation
 function setupEventHandlers() {
-    // Navigation
+    // Navigation - use routing instead of direct page load
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
             const page = item.dataset.page;
-            
-            // Update active state
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            item.classList.add('active');
-            
-            // Load page
-            loadPage(page);
+            navigateToRoute(page);
         });
     });
 }

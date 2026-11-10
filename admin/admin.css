@@ -861,6 +861,35 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
+/* Mobile Back Button */
+.mobile-back-btn {
+    display: none;
+    width: 44px;
+    height: 44px;
+    background: var(--dark-card);
+    border: 2px solid var(--primary-color);
+    border-radius: 8px;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    color: var(--primary-color);
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.mobile-back-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: scale(1.05);
+}
+
+@media (max-width: 968px) {
+    .mobile-back-btn {
+        display: flex;
+    }
+}
+
 .mobile-menu-toggle:hover {
     background: var(--primary-color);
     transform: scale(1.05);
@@ -906,6 +935,72 @@
 }
 
 .mobile-overlay.active {
+    opacity: 1;
+}
+
+/* Update Notification */
+.update-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 4000;
+    background: linear-gradient(135deg, var(--primary-color), #00A86B);
+    color: white;
+    padding: 16px 20px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 168, 107, 0.4);
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.update-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.update-btn {
+    background: white;
+    color: var(--primary-color);
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.update-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.dismiss-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    line-height: 1;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.dismiss-btn:hover {
     opacity: 1;
 }
 

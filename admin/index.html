@@ -63,6 +63,15 @@
     </div>
 
     <div id="adminPanel" class="admin-panel" style="display: none;">
+        <!-- Update Notification -->
+        <div id="updateNotification" class="update-notification" style="display: none;">
+            <div class="update-content">
+                <span>🎉 New update available!</span>
+                <button id="updateBtn" class="update-btn">Reload to Update</button>
+                <button id="dismissUpdateBtn" class="dismiss-btn">×</button>
+            </div>
+        </div>
+        
         <!-- Mobile Menu Toggle -->
         <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle navigation menu">
             <span></span>
@@ -87,7 +96,7 @@
             </div>
             
             <nav class="admin-nav">
-                <a href="#dashboard" class="nav-item active" data-page="dashboard">
+                <a href="#/dashboard" class="nav-item active" data-page="dashboard">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="3" width="7" height="7"></rect>
                         <rect x="14" y="3" width="7" height="7"></rect>
@@ -96,13 +105,13 @@
                     </svg>
                     Dashboard
                 </a>
-                <a href="#products" class="nav-item" data-page="products">
+                <a href="#/products" class="nav-item" data-page="products">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M20 7h-9M14 17H5M21 12l-9 0M9 7l0 14"></path>
                     </svg>
                     Products
                 </a>
-                <a href="#orders" class="nav-item" data-page="orders">
+                <a href="#/orders" class="nav-item" data-page="orders">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="9" cy="21" r="1"></circle>
                         <circle cx="20" cy="21" r="1"></circle>
@@ -110,7 +119,7 @@
                     </svg>
                     Orders
                 </a>
-                <a href="#requests" class="nav-item" data-page="requests">
+                <a href="#/requests" class="nav-item" data-page="requests">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                         <polyline points="14 2 14 8 20 8"></polyline>
@@ -119,7 +128,7 @@
                     </svg>
                     Custom Requests
                 </a>
-                <a href="#printqueue" class="nav-item" data-page="printqueue">
+                <a href="#/printqueue" class="nav-item" data-page="printqueue">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="6 9 6 2 18 2 18 9"></polyline>
                         <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
@@ -127,13 +136,13 @@
                     </svg>
                     Print Queue
                 </a>
-                <a href="#telemetry" class="nav-item" data-page="telemetry">
+                <a href="#/telemetry" class="nav-item" data-page="telemetry">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
                     </svg>
                     Live Telemetry
                 </a>
-                <a href="#deliveries" class="nav-item" data-page="deliveries">
+                <a href="#/deliveries" class="nav-item" data-page="deliveries">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="1" y="3" width="15" height="13"></rect>
                         <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
@@ -142,7 +151,7 @@
                     </svg>
                     Deliveries
                 </a>
-                <a href="#analytics" class="nav-item" data-page="analytics">
+                <a href="#/analytics" class="nav-item" data-page="analytics">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="20" x2="18" y2="10"></line>
                         <line x1="12" y1="20" x2="12" y2="4"></line>
@@ -150,7 +159,7 @@
                     </svg>
                     Analytics
                 </a>
-                <a href="#reports" class="nav-item" data-page="reports">
+                <a href="#/reports" class="nav-item" data-page="reports">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                         <polyline points="14 2 14 8 20 8"></polyline>
@@ -160,7 +169,7 @@
                     </svg>
                     Reports
                 </a>
-                <a href="#users" class="nav-item owner-only" data-page="users" style="display: none;">
+                <a href="#/users" class="nav-item owner-only" data-page="users" style="display: none;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                         <circle cx="9" cy="7" r="4"></circle>
