@@ -1531,30 +1531,51 @@ function openAddProductModal() {
                         <div id="3dModelSection" style="display: none; border-left: 3px solid var(--primary-color); padding-left: 16px; margin-top: 12px;">
                             <div class="form-group">
                                 <label>3D Model (.glb / .gltf) *</label>
-                                <input type="file" id="product3DModelFile" accept=".glb,.gltf" onchange="handle3DModelSelect(event)">
+                                <input type="file" id="product3DModelFile" accept=".glb,.gltf,model/gltf-binary,model/gltf+json" onchange="handle3DModelSelect(event)">
                                 <small style="color: var(--text-muted); display: block; margin-top: 4px;">
-                                    📦 Required for 3D viewer. Max 10 MB. 
-                                    <a href="https://github.com/KhronosGroup/glTF-Sample-Models" target="_blank" style="color: var(--primary-color);">Get samples</a>
+                                    📦 Required for 3D viewer. Max 10 MB. Upload from Files app.
                                 </small>
                                 <div id="modelPreview" style="margin-top: 8px; color: var(--text-muted); font-size: 14px;"></div>
+                                <div id="modelViewer" style="margin-top: 12px; display: none;"></div>
+                                <div id="uploadProgress" style="margin-top: 8px; display: none;">
+                                    <div style="background: var(--dark-bg); border-radius: 4px; height: 6px; overflow: hidden;">
+                                        <div id="progressBar" style="background: var(--primary-color); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                                    </div>
+                                    <div id="progressText" style="font-size: 12px; margin-top: 4px; color: var(--text-muted);"></div>
+                                </div>
                             </div>
                             
                             <div class="form-group">
                                 <label>iOS AR Model (.usdz) <em style="color: var(--text-muted); font-weight: normal;">(Optional)</em></label>
-                                <input type="file" id="productIOSModelFile" accept=".usdz" onchange="handleIOSModelSelect(event)">
+                                <input type="file" id="productIOSModelFile" accept=".usdz,model/vnd.usdz+zip" onchange="handleIOSModelSelect(event)">
                                 <small style="color: var(--text-muted); display: block; margin-top: 4px;">
-                                    📱 Enables "View in Your Space" AR on iPhone/iPad. Convert GLB → USDZ with Reality Converter.
+                                    📱 Enables "View in Your Space" AR on iPhone/iPad. Upload USDZ from Files app.
                                 </small>
                                 <div id="iosModelPreview" style="margin-top: 8px; color: var(--text-muted); font-size: 14px;"></div>
                             </div>
                             
-                            <div style="background: rgba(0, 168, 107, 0.1); border: 1px solid var(--primary-color); border-radius: 4px; padding: 12px; margin-top: 12px;">
-                                <strong style="color: var(--primary-color);">💡 How to create 3D models:</strong>
-                                <ul style="margin: 8px 0 0 20px; font-size: 14px; color: var(--text-muted);">
-                                    <li><strong>Phone scan:</strong> Polycam, Luma AI, RealityScan apps</li>
-                                    <li><strong>AI tools:</strong> Meshy.ai, Luma Genie (image → 3D)</li>
-                                    <li><strong>3D software:</strong> Blender (free), TinkerCAD for parts</li>
-                                </ul>
+                            <div style="background: rgba(0, 217, 255, 0.08); border: 2px solid rgba(0, 217, 255, 0.3); border-radius: 8px; padding: 16px; margin-top: 16px;">
+                                <strong style="color: var(--primary-color); font-size: 15px;">📱 How to make a 3D model with your iPhone:</strong>
+                                <ol style="margin: 12px 0 0 20px; font-size: 13px; color: var(--text-muted); line-height: 1.7;">
+                                    <li><strong>Download a 3D scanning app:</strong>
+                                        <ul style="margin: 4px 0 8px 20px;">
+                                            <li><strong>Polycam</strong> (free, recommended) - App Store</li>
+                                            <li><strong>KIRI Engine</strong> (free) - App Store</li>
+                                            <li><strong>3D Scanner App</strong> (paid, high quality)</li>
+                                        </ul>
+                                    </li>
+                                    <li><strong>Scan your auto part:</strong> Walk around the part slowly, capturing it from all angles (takes 1-2 minutes)</li>
+                                    <li><strong>Process:</strong> The app will convert your photos into a 3D model</li>
+                                    <li><strong>Export:</strong> Save as GLB or USDZ to your Files app</li>
+                                    <li><strong>Upload here:</strong> Tap the file picker above and select your model from Files</li>
+                                </ol>
+                                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(0, 217, 255, 0.2);">
+                                    <strong style="color: var(--primary-color);">💡 Other options:</strong>
+                                    <ul style="margin: 6px 0 0 20px; font-size: 12px; color: var(--text-muted);">
+                                        <li><strong>AI generation:</strong> Meshy.ai, Luma Genie (photo → 3D)</li>
+                                        <li><strong>Desktop software:</strong> Blender (free), TinkerCAD</li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1777,10 +1798,12 @@ function handleImageSelect(event) {
 function handle3DModelSelect(event) {
     const file = event.target.files[0];
     const previewEl = document.getElementById('modelPreview');
+    const viewerEl = document.getElementById('modelViewer');
     
     if (!file) {
         selected3DModelFile = null;
         previewEl.innerHTML = '';
+        if (viewerEl) viewerEl.style.display = 'none';
         return;
     }
     
@@ -1789,13 +1812,15 @@ function handle3DModelSelect(event) {
         showError('Please select a GLB or GLTF file');
         event.target.value = '';
         previewEl.innerHTML = '';
+        if (viewerEl) viewerEl.style.display = 'none';
         return;
     }
     
     if (file.size > 10 * 1024 * 1024) {
-        showError('3D model size must be less than 10MB. Consider optimizing the model.');
+        showError('3D model size must be less than 10MB. Consider optimizing the model or using a compression tool like gltf-pipeline.');
         event.target.value = '';
         previewEl.innerHTML = '';
+        if (viewerEl) viewerEl.style.display = 'none';
         return;
     }
     
@@ -1811,6 +1836,26 @@ function handle3DModelSelect(event) {
             📦 <strong>${file.name}</strong> (${sizeMB} MB)${sizeWarning}
         </div>
     `;
+    
+    // Show 3D preview
+    if (viewerEl) {
+        const objectURL = URL.createObjectURL(file);
+        viewerEl.innerHTML = `
+            <div style="margin-top: 8px; padding: 8px; background: rgba(0, 217, 255, 0.05); border: 1px solid rgba(0, 217, 255, 0.2); border-radius: 8px;">
+                <div style="font-size: 12px; color: var(--primary-color); margin-bottom: 8px; font-weight: 600;">3D Preview:</div>
+                <model-viewer 
+                    src="${objectURL}"
+                    alt="3D Model Preview"
+                    auto-rotate
+                    camera-controls
+                    style="width: 100%; height: 300px; background-color: #1a1a1a; border-radius: 6px;"
+                    loading="eager"
+                    reveal="auto">
+                </model-viewer>
+            </div>
+        `;
+        viewerEl.style.display = 'block';
+    }
 }
 
 function handleIOSModelSelect(event) {
