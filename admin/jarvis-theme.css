@@ -696,5 +696,103 @@ body .admin-panel {
     .admin-sidebar {
         background: linear-gradient(180deg, rgba(26, 26, 26, 0.98) 0%, rgba(18, 18, 18, 0.98) 100%);
         backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+    }
+    
+    /* Mobile menu toggle - Jarvis style */
+    .mobile-menu-toggle {
+        background: rgba(26, 26, 26, 0.95);
+        border-color: var(--jarvis-cyan-primary);
+        box-shadow: var(--jarvis-border-glow), 0 4px 12px rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+    
+    .mobile-menu-toggle span {
+        background: var(--jarvis-cyan-bright);
+        box-shadow: 0 0 8px rgba(0, 217, 255, 0.4);
+    }
+    
+    .mobile-menu-toggle:hover {
+        background: rgba(0, 217, 255, 0.15);
+        box-shadow: var(--jarvis-glow-cyan);
+    }
+    
+    .mobile-menu-toggle:hover span {
+        background: var(--jarvis-cyan-bright);
+        box-shadow: 0 0 12px rgba(0, 217, 255, 0.6);
+    }
+    
+    /* Mobile overlay - Jarvis style */
+    .mobile-overlay {
+        background: rgba(0, 0, 0, 0.9);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+    
+    /* Touch-friendly nav items */
+    .nav-item {
+        font-size: 15px;
+        padding: 18px 24px;
+    }
+    
+    /* Mobile header adjustments */
+    .admin-header h1 {
+        font-size: 18px;
+        text-shadow: 0 0 15px rgba(0, 217, 255, 0.4);
+    }
+    
+    /* Mobile stat cards */
+    .stat-card {
+        padding: 18px;
+    }
+    
+    .stat-value {
+        font-size: 28px;
+    }
+    
+    .stat-label {
+        font-size: 11px;
+    }
+    
+    /* Mobile modal */
+    .modal-content {
+        border: 2px solid var(--jarvis-border-primary);
+        box-shadow: var(--jarvis-glow-cyan), 0 -10px 40px rgba(0, 0, 0, 0.8);
+    }
+    
+    /* Mobile tables */
+    .data-table th {
+        font-size: 10px;
+        padding: 12px 16px;
+    }
+    
+    .data-table td {
+        font-size: 13px;
+        padding: 12px 16px;
+    }
+    
+    /* Mobile action buttons */
+    .action-btn,
+    .btn {
+        font-size: 13px;
+        letter-spacing: 0.3px;
+    }
+    
+    /* iOS-specific safe area adjustments */
+    @supports (padding: env(safe-area-inset-top)) {
+        .mobile-menu-toggle {
+            top: calc(16px + env(safe-area-inset-top));
+            left: calc(16px + env(safe-area-inset-left));
+        }
+        
+        .admin-sidebar {
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        
+        .sidebar-header {
+            margin-top: 12px;
+        }
     }
 }

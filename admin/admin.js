@@ -6,11 +6,20 @@
 let supabaseClient = null;
 let currentUser = null;
 let currentUserProfile = null;
+let currentRoute = 'dashboard';
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
+    // Hide both screens initially while checking auth
+    const loginScreen = document.getElementById('loginScreen');
+    const adminPanel = document.getElementById('adminPanel');
+    
+    loginScreen.style.display = 'none';
+    adminPanel.style.display = 'none';
+    
     // Check if Supabase is configured
     if (!isConfigured()) {
+        loginScreen.style.display = 'flex';
         showError('Supabase not configured. Please update supabase/config.js with your project credentials.');
         return;
     }
@@ -19,15 +28,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     supabaseClient = initSupabase();
     
     if (!supabaseClient) {
+        loginScreen.style.display = 'flex';
         showError('Failed to initialize Supabase client. Please check the console for errors.');
         return;
     }
     
     // Check for existing session
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    
-    if (session) {
-        await loadUserProfile(session.user);
+    try {
+        const { data: { session }, error } = await supabaseClient.auth.getSession();
+        
+        if (error) throw error;
+        
+        if (session && session.user) {
+            // User has active session - load profile and show admin panel
+            await loadUserProfile(session.user);
+        } else {
+            // No session - show login screen
+            loginScreen.style.display = 'flex';
+        }
+    } catch (error) {
+        console.error('Auth initialization error:', error);
+        loginScreen.style.display = 'flex';
     }
     
     // Set up auth listeners
@@ -35,7 +56,69 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Set up event handlers
     setupEventHandlers();
+    
+    // Set up mobile menu
+    setupMobileMenu();
+    
+    // Set up routing
+    setupRouting();
+    
+    // Set up service worker update handling
+    setupServiceWorkerUpdate();
 });
+
+// Service Worker Update Handling
+function setupServiceWorkerUpdate() {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('../service-worker.js').then(registration => {
+            // Check for updates every 60 seconds
+            setInterval(() => {
+                registration.update();
+            }, 60000);
+            
+            // Listen for updates
+            registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                
+                newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        // New service worker available
+                        showUpdateNotification();
+                    }
+                });
+            });
+        });
+        
+        // Handle controller change (when new SW takes over)
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            window.location.reload();
+        });
+    }
+}
+
+function showUpdateNotification() {
+    const notification = document.getElementById('updateNotification');
+    const updateBtn = document.getElementById('updateBtn');
+    const dismissBtn = document.getElementById('dismissUpdateBtn');
+    
+    if (!notification) return;
+    
+    notification.style.display = 'block';
+    
+    updateBtn.onclick = () => {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistration().then(registration => {
+                if (registration && registration.waiting) {
+                    registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                }
+            });
+        }
+    };
+    
+    dismissBtn.onclick = () => {
+        notification.style.display = 'none';
+    };
+}
 
 // Auth Functions
 function setupAuthListeners() {
@@ -137,24 +220,139 @@ function showAdminPanel() {
         el.style.display = currentUserProfile.role === 'owner' ? 'flex' : 'none';
     });
     
-    // Load dashboard
-    loadPage('dashboard');
+    // Don't call loadPage directly - routing will handle it
+}
+
+// Mobile Menu Setup
+function setupMobileMenu() {
+    const menuToggle = document.getElementById('mobileMenuToggle');
+    const sidebar = document.getElementById('adminSidebar');
+    const overlay = document.getElementById('mobileOverlay');
+    
+    if (!menuToggle || !sidebar || !overlay) return;
+    
+    const closeMobileMenu = () => {
+        menuToggle.classList.remove('active');
+        sidebar.classList.remove('mobile-open');
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+    };
+    
+    const openMobileMenu = () => {
+        menuToggle.classList.add('active');
+        sidebar.classList.add('mobile-open');
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    };
+    
+    menuToggle.addEventListener('click', () => {
+        if (sidebar.classList.contains('mobile-open')) {
+            closeMobileMenu();
+        } else {
+            openMobileMenu();
+        }
+    });
+    
+    overlay.addEventListener('click', closeMobileMenu);
+    
+    // Close menu when nav item is clicked
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            if (window.innerWidth <= 968) {
+                closeMobileMenu();
+            }
+        });
+    });
+    
+    // Close menu on window resize if switching to desktop
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            if (window.innerWidth > 968) {
+                closeMobileMenu();
+            }
+        }, 250);
+    });
+    
+    // Store for global access
+    window.closeMobileMenu = closeMobileMenu;
+}
+
+// Routing Setup - Hash-based navigation
+function setupRouting() {
+    // Handle back button / popstate
+    window.addEventListener('popstate', (e) => {
+        const route = window.location.hash.slice(2) || 'dashboard'; // Remove #/ prefix
+        navigateToRoute(route, false); // false = don't push history again
+    });
+    
+    // Initial route on load
+    const initialRoute = window.location.hash.slice(2) || 'dashboard';
+    navigateToRoute(initialRoute, false);
+}
+
+// Navigate to a route
+function navigateToRoute(route, pushHistory = true) {
+    currentRoute = route;
+    
+    // Update URL hash
+    if (pushHistory) {
+        window.location.hash = '#/' + route;
+    }
+    
+    // Update active nav item
+    document.querySelectorAll('.nav-item').forEach(item => {
+        if (item.dataset.page === route) {
+            item.classList.add('active');
+        } else {
+            item.classList.remove('active');
+        }
+    });
+    
+    // Update mobile back button visibility
+    updateMobileBackButton(route);
+    
+    // Load the page
+    loadPage(route);
+    
+    // Close mobile menu if open
+    if (window.closeMobileMenu) {
+        window.closeMobileMenu();
+    }
+}
+
+// Update mobile back button
+function updateMobileBackButton(route) {
+    const header = document.querySelector('.admin-header');
+    if (!header) return;
+    
+    // Remove existing back button
+    const existingBack = header.querySelector('.mobile-back-btn');
+    if (existingBack) existingBack.remove();
+    
+    // Add back button on mobile if not on dashboard
+    if (window.innerWidth <= 968 && route !== 'dashboard') {
+        const backBtn = document.createElement('button');
+        backBtn.className = 'mobile-back-btn';
+        backBtn.innerHTML = `
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+        `;
+        backBtn.onclick = () => navigateToRoute('dashboard');
+        header.insertBefore(backBtn, header.firstChild);
+    }
 }
 
 // Navigation
 function setupEventHandlers() {
-    // Navigation
+    // Navigation - use routing instead of direct page load
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
             const page = item.dataset.page;
-            
-            // Update active state
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            item.classList.add('active');
-            
-            // Load page
-            loadPage(page);
+            navigateToRoute(page);
         });
     });
 }
@@ -231,7 +429,6 @@ async function loadDashboard() {
                 </div>
                 <div class="stat-value" id="totalOrders">-</div>
                 <div class="stat-label">Total Orders</div>
-                <div class="stat-change positive">Loading...</div>
             </div>
             
             <div class="stat-card">
@@ -1334,30 +1531,51 @@ function openAddProductModal() {
                         <div id="3dModelSection" style="display: none; border-left: 3px solid var(--primary-color); padding-left: 16px; margin-top: 12px;">
                             <div class="form-group">
                                 <label>3D Model (.glb / .gltf) *</label>
-                                <input type="file" id="product3DModelFile" accept=".glb,.gltf" onchange="handle3DModelSelect(event)">
+                                <input type="file" id="product3DModelFile" accept=".glb,.gltf,model/gltf-binary,model/gltf+json" onchange="handle3DModelSelect(event)">
                                 <small style="color: var(--text-muted); display: block; margin-top: 4px;">
-                                    📦 Required for 3D viewer. Max 10 MB. 
-                                    <a href="https://github.com/KhronosGroup/glTF-Sample-Models" target="_blank" style="color: var(--primary-color);">Get samples</a>
+                                    📦 Required for 3D viewer. Max 10 MB. Upload from Files app.
                                 </small>
                                 <div id="modelPreview" style="margin-top: 8px; color: var(--text-muted); font-size: 14px;"></div>
+                                <div id="modelViewer" style="margin-top: 12px; display: none;"></div>
+                                <div id="uploadProgress" style="margin-top: 8px; display: none;">
+                                    <div style="background: var(--dark-bg); border-radius: 4px; height: 6px; overflow: hidden;">
+                                        <div id="progressBar" style="background: var(--primary-color); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                                    </div>
+                                    <div id="progressText" style="font-size: 12px; margin-top: 4px; color: var(--text-muted);"></div>
+                                </div>
                             </div>
                             
                             <div class="form-group">
                                 <label>iOS AR Model (.usdz) <em style="color: var(--text-muted); font-weight: normal;">(Optional)</em></label>
-                                <input type="file" id="productIOSModelFile" accept=".usdz" onchange="handleIOSModelSelect(event)">
+                                <input type="file" id="productIOSModelFile" accept=".usdz,model/vnd.usdz+zip" onchange="handleIOSModelSelect(event)">
                                 <small style="color: var(--text-muted); display: block; margin-top: 4px;">
-                                    📱 Enables "View in Your Space" AR on iPhone/iPad. Convert GLB → USDZ with Reality Converter.
+                                    📱 Enables "View in Your Space" AR on iPhone/iPad. Upload USDZ from Files app.
                                 </small>
                                 <div id="iosModelPreview" style="margin-top: 8px; color: var(--text-muted); font-size: 14px;"></div>
                             </div>
                             
-                            <div style="background: rgba(0, 168, 107, 0.1); border: 1px solid var(--primary-color); border-radius: 4px; padding: 12px; margin-top: 12px;">
-                                <strong style="color: var(--primary-color);">💡 How to create 3D models:</strong>
-                                <ul style="margin: 8px 0 0 20px; font-size: 14px; color: var(--text-muted);">
-                                    <li><strong>Phone scan:</strong> Polycam, Luma AI, RealityScan apps</li>
-                                    <li><strong>AI tools:</strong> Meshy.ai, Luma Genie (image → 3D)</li>
-                                    <li><strong>3D software:</strong> Blender (free), TinkerCAD for parts</li>
-                                </ul>
+                            <div style="background: rgba(0, 217, 255, 0.08); border: 2px solid rgba(0, 217, 255, 0.3); border-radius: 8px; padding: 16px; margin-top: 16px;">
+                                <strong style="color: var(--primary-color); font-size: 15px;">📱 How to make a 3D model with your iPhone:</strong>
+                                <ol style="margin: 12px 0 0 20px; font-size: 13px; color: var(--text-muted); line-height: 1.7;">
+                                    <li><strong>Download a 3D scanning app:</strong>
+                                        <ul style="margin: 4px 0 8px 20px;">
+                                            <li><strong>Polycam</strong> (free, recommended) - App Store</li>
+                                            <li><strong>KIRI Engine</strong> (free) - App Store</li>
+                                            <li><strong>3D Scanner App</strong> (paid, high quality)</li>
+                                        </ul>
+                                    </li>
+                                    <li><strong>Scan your auto part:</strong> Walk around the part slowly, capturing it from all angles (takes 1-2 minutes)</li>
+                                    <li><strong>Process:</strong> The app will convert your photos into a 3D model</li>
+                                    <li><strong>Export:</strong> Save as GLB or USDZ to your Files app</li>
+                                    <li><strong>Upload here:</strong> Tap the file picker above and select your model from Files</li>
+                                </ol>
+                                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(0, 217, 255, 0.2);">
+                                    <strong style="color: var(--primary-color);">💡 Other options:</strong>
+                                    <ul style="margin: 6px 0 0 20px; font-size: 12px; color: var(--text-muted);">
+                                        <li><strong>AI generation:</strong> Meshy.ai, Luma Genie (photo → 3D)</li>
+                                        <li><strong>Desktop software:</strong> Blender (free), TinkerCAD</li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1580,10 +1798,12 @@ function handleImageSelect(event) {
 function handle3DModelSelect(event) {
     const file = event.target.files[0];
     const previewEl = document.getElementById('modelPreview');
+    const viewerEl = document.getElementById('modelViewer');
     
     if (!file) {
         selected3DModelFile = null;
         previewEl.innerHTML = '';
+        if (viewerEl) viewerEl.style.display = 'none';
         return;
     }
     
@@ -1592,13 +1812,15 @@ function handle3DModelSelect(event) {
         showError('Please select a GLB or GLTF file');
         event.target.value = '';
         previewEl.innerHTML = '';
+        if (viewerEl) viewerEl.style.display = 'none';
         return;
     }
     
     if (file.size > 10 * 1024 * 1024) {
-        showError('3D model size must be less than 10MB. Consider optimizing the model.');
+        showError('3D model size must be less than 10MB. Consider optimizing the model or using a compression tool like gltf-pipeline.');
         event.target.value = '';
         previewEl.innerHTML = '';
+        if (viewerEl) viewerEl.style.display = 'none';
         return;
     }
     
@@ -1614,6 +1836,26 @@ function handle3DModelSelect(event) {
             📦 <strong>${file.name}</strong> (${sizeMB} MB)${sizeWarning}
         </div>
     `;
+    
+    // Show 3D preview
+    if (viewerEl) {
+        const objectURL = URL.createObjectURL(file);
+        viewerEl.innerHTML = `
+            <div style="margin-top: 8px; padding: 8px; background: rgba(0, 217, 255, 0.05); border: 1px solid rgba(0, 217, 255, 0.2); border-radius: 8px;">
+                <div style="font-size: 12px; color: var(--primary-color); margin-bottom: 8px; font-weight: 600;">3D Preview:</div>
+                <model-viewer 
+                    src="${objectURL}"
+                    alt="3D Model Preview"
+                    auto-rotate
+                    camera-controls
+                    style="width: 100%; height: 300px; background-color: #1a1a1a; border-radius: 6px;"
+                    loading="eager"
+                    reveal="auto">
+                </model-viewer>
+            </div>
+        `;
+        viewerEl.style.display = 'block';
+    }
 }
 
 function handleIOSModelSelect(event) {
