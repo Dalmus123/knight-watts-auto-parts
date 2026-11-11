@@ -2,7 +2,7 @@
 // Enables offline functionality and app-like experience
 // GitHub Pages compatible, safe with Supabase API calls
 
-const CACHE_NAME = 'knight-watts-v1.0.9';
+const CACHE_NAME = 'knight-watts-v1.1.0';
 const OFFLINE_URL = '/offline.html';
 
 // Get the base path for GitHub Pages (e.g., /knight-watts-auto-parts)

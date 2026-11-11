@@ -7,6 +7,7 @@ let supabaseClient = null;
 let currentUser = null;
 let currentUserProfile = null;
 let currentRoute = 'dashboard';
+let allProducts = []; // Store all products for filtering
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
@@ -650,16 +651,30 @@ async function loadProducts() {
         </div>
     `;
     
-    // Attach event listener for Add Product button
+    // Load products first
+    await refreshProductsTable();
+    
+    // Attach event listener for Add Product button (after products are loaded)
     const addBtn = document.getElementById('addProductBtn');
     if (addBtn) {
-        addBtn.addEventListener('click', () => {
+        // Use both click and touchend for better mobile support
+        const handleAdd = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[Admin] Add Product button clicked');
             openAddProductModal();
-        });
+        };
+        addBtn.addEventListener('click', handleAdd);
+        addBtn.addEventListener('touchend', handleAdd, { passive: false });
     }
     
-    // Load products
-    await refreshProductsTable();
+    // Attach search functionality
+    const searchInput = document.getElementById('productSearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            filterProducts(e.target.value);
+        });
+    }
 }
 
 async function refreshProductsTable() {
@@ -671,11 +686,32 @@ async function refreshProductsTable() {
         
         if (error) throw error;
         
-        renderProductsTable(products);
+        allProducts = products || [];
+        renderProductsTable(allProducts);
     } catch (error) {
         console.error('Load products error:', error);
         showError('Failed to load products');
     }
+}
+
+function filterProducts(searchTerm) {
+    if (!searchTerm || searchTerm.trim() === '') {
+        renderProductsTable(allProducts);
+        return;
+    }
+    
+    const term = searchTerm.toLowerCase().trim();
+    const filtered = allProducts.filter(product => {
+        return (
+            product.name?.toLowerCase().includes(term) ||
+            product.category?.toLowerCase().includes(term) ||
+            product.location?.toLowerCase().includes(term) ||
+            product.sku?.toLowerCase().includes(term) ||
+            product.manufacturer?.toLowerCase().includes(term)
+        );
+    });
+    
+    renderProductsTable(filtered);
 }
 
 function renderProductsTable(products) {

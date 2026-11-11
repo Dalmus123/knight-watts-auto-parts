@@ -1119,12 +1119,42 @@
 
 /* Responsive */
 @media (max-width: 968px) {
+    /* Fix scrolling on mobile */
+    .admin-panel {
+        height: auto;
+        min-height: 100vh;
+        overflow: visible;
+        flex-direction: column;
+    }
+    
+    .admin-main {
+        flex: 1;
+        overflow: visible;
+        min-height: 0;
+    }
+    
+    .content-area {
+        padding: 20px 16px;
+        padding-bottom: calc(20px + env(safe-area-inset-bottom));
+        overflow: visible;
+        height: auto;
+    }
+    
     .mobile-menu-toggle {
         display: flex;
+        top: calc(16px + env(safe-area-inset-top));
     }
     
     .mobile-overlay {
         display: block;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+    
+    .mobile-overlay.active {
+        pointer-events: all;
+        opacity: 1;
     }
     
     .admin-sidebar {
@@ -1144,6 +1174,9 @@
     .admin-header {
         padding-left: 72px;
         padding-right: 16px;
+        position: sticky;
+        top: 0;
+        z-index: 100;
     }
     
     .admin-header h1 {
@@ -1172,12 +1205,9 @@
         min-width: 600px;
     }
     
-    .content-area {
-        padding: 20px 16px;
-    }
-    
     .search-filter-bar {
         flex-direction: column;
+        margin-top: 72px;
     }
     
     .search-box {
