@@ -634,7 +634,7 @@ async function loadProducts() {
                 </svg>
                 <input type="text" placeholder="Search products..." id="productSearch">
             </div>
-            <button class="btn btn-primary" onclick="openAddProductModal()">Add Product</button>
+            <button class="btn btn-primary" id="addProductBtn">Add Product</button>
         </div>
         
         <div class="table-container">
@@ -649,6 +649,14 @@ async function loadProducts() {
             </div>
         </div>
     `;
+    
+    // Attach event listener for Add Product button
+    const addBtn = document.getElementById('addProductBtn');
+    if (addBtn) {
+        addBtn.addEventListener('click', () => {
+            openAddProductModal();
+        });
+    }
     
     // Load products
     await refreshProductsTable();
@@ -678,52 +686,109 @@ function renderProductsTable(products) {
         return;
     }
     
-    const html = `
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Image</th>
-                    <th>Name</th>
-                    <th>Category</th>
-                    <th>Price (KES)</th>
-                    <th>Stock</th>
-                    <th>Location</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
+    // Check if mobile
+    const isMobile = window.innerWidth <= 968;
+    
+    if (isMobile) {
+        // Render as mobile cards
+        const html = `
+            <div class="products-mobile-grid">
                 ${products.map(product => {
                     const imageUrl = product.primary_image_path ? 
                         getProductImageUrl(product.primary_image_path) : null;
                     return `
-                    <tr>
-                        <td>
+                    <div class="product-card" data-product-id="${product.id}">
+                        <div class="product-card-image">
                             ${imageUrl ? 
-                                `<img src="${imageUrl}" alt="${product.name}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color);">` : 
-                                '<div style="width: 60px; height: 60px; background: var(--surface-color); border-radius: 4px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); font-size: 24px;">📦</div>'
+                                `<img src="${imageUrl}" alt="${product.name}">` : 
+                                '<div class="product-card-placeholder">📦</div>'
                             }
-                        </td>
-                        <td><strong>${product.name}</strong></td>
-                        <td>${product.category}</td>
-                        <td>KES ${formatCurrency(product.price_kes)}</td>
-                        <td>
-                            ${product.stock_quantity}
-                            ${product.stock_quantity <= (product.low_stock_threshold || 5) ? '<span style="color: var(--warning);">⚠️</span>' : ''}
-                        </td>
-                        <td>${product.location}</td>
-                        <td><span class="status-badge ${product.is_active ? 'completed' : 'cancelled'}">${product.is_active ? 'Active' : 'Inactive'}</span></td>
-                        <td>
-                            <button class="action-btn action-btn-secondary" onclick="editProduct('${product.id}')">Edit</button>
-                        </td>
-                    </tr>
+                        </div>
+                        <div class="product-card-content">
+                            <h4>${product.name}</h4>
+                            <div class="product-card-meta">
+                                <span class="product-card-category">${product.category}</span>
+                                <span class="product-card-location">📍 ${product.location}</span>
+                            </div>
+                            <div class="product-card-price">KES ${formatCurrency(product.price_kes)}</div>
+                            <div class="product-card-stock">
+                                Stock: <strong>${product.stock_quantity}</strong>
+                                ${product.stock_quantity <= (product.low_stock_threshold || 5) ? '<span style="color: var(--warning);">⚠️ Low</span>' : ''}
+                            </div>
+                            <div class="product-card-status">
+                                <span class="status-badge ${product.is_active ? 'completed' : 'cancelled'}">${product.is_active ? 'Active' : 'Inactive'}</span>
+                            </div>
+                        </div>
+                    </div>
                 `;
                 }).join('')}
-            </tbody>
-        </table>
-    `;
-    
-    container.innerHTML = html;
+            </div>
+        `;
+        container.innerHTML = html;
+        
+        // Attach click handlers to cards
+        document.querySelectorAll('.product-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const productId = card.dataset.productId;
+                editProduct(productId);
+            });
+        });
+    } else {
+        // Render as desktop table
+        const html = `
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Image</th>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th>Price (KES)</th>
+                        <th>Stock</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${products.map(product => {
+                        const imageUrl = product.primary_image_path ? 
+                            getProductImageUrl(product.primary_image_path) : null;
+                        return `
+                        <tr>
+                            <td>
+                                ${imageUrl ? 
+                                    `<img src="${imageUrl}" alt="${product.name}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color);">` : 
+                                    '<div style="width: 60px; height: 60px; background: var(--surface-color); border-radius: 4px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); font-size: 24px;">📦</div>'
+                                }
+                            </td>
+                            <td><strong>${product.name}</strong></td>
+                            <td>${product.category}</td>
+                            <td>KES ${formatCurrency(product.price_kes)}</td>
+                            <td>
+                                ${product.stock_quantity}
+                                ${product.stock_quantity <= (product.low_stock_threshold || 5) ? '<span style="color: var(--warning);">⚠️</span>' : ''}
+                            </td>
+                            <td>${product.location}</td>
+                            <td><span class="status-badge ${product.is_active ? 'completed' : 'cancelled'}">${product.is_active ? 'Active' : 'Inactive'}</span></td>
+                            <td>
+                                <button class="action-btn action-btn-secondary" data-edit-id="${product.id}">Edit</button>
+                            </td>
+                        </tr>
+                    `;
+                    }).join('')}
+                </tbody>
+            </table>
+        `;
+        container.innerHTML = html;
+        
+        // Attach click handlers to edit buttons
+        document.querySelectorAll('[data-edit-id]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const productId = btn.dataset.editId;
+                editProduct(productId);
+            });
+        });
+    }
 }
 
 function getProductImageUrl(imagePath) {
@@ -1531,7 +1596,7 @@ function openAddProductModal() {
                         <div id="3dModelSection" style="display: none; border-left: 3px solid var(--primary-color); padding-left: 16px; margin-top: 12px;">
                             <div class="form-group">
                                 <label>3D Model (.glb / .gltf) *</label>
-                                <input type="file" id="product3DModelFile" accept=".glb,.gltf,model/gltf-binary,model/gltf+json" onchange="handle3DModelSelect(event)">
+                                <input type="file" id="product3DModelFile" accept=".glb,.gltf,model/gltf-binary,model/gltf+json,application/octet-stream" onchange="handle3DModelSelect(event)">
                                 <small style="color: var(--text-muted); display: block; margin-top: 4px;">
                                     📦 Required for 3D viewer. Max 10 MB. Upload from Files app.
                                 </small>
@@ -1807,9 +1872,10 @@ function handle3DModelSelect(event) {
         return;
     }
     
+    // Validate file extension (works even if accept attribute is permissive for iOS)
     const ext = file.name.split('.').pop().toLowerCase();
     if (!['glb', 'gltf'].includes(ext)) {
-        showError('Please select a GLB or GLTF file');
+        showError('Please select a GLB or GLTF file (.glb or .gltf extension required)');
         event.target.value = '';
         previewEl.innerHTML = '';
         if (viewerEl) viewerEl.style.display = 'none';
