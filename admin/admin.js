@@ -657,15 +657,26 @@ async function loadProducts() {
     // Attach event listener for Add Product button (after products are loaded)
     const addBtn = document.getElementById('addProductBtn');
     if (addBtn) {
-        // Use both click and touchend for better mobile support
-        const handleAdd = (e) => {
+        let touchHandled = false;
+        
+        // Handle touch devices
+        addBtn.addEventListener('touchend', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('[Admin] Add Product button clicked');
+            touchHandled = true;
+            console.log('[Admin] Add Product button tapped (touch)');
             openAddProductModal();
-        };
-        addBtn.addEventListener('click', handleAdd);
-        addBtn.addEventListener('touchend', handleAdd, { passive: false });
+            setTimeout(() => { touchHandled = false; }, 500);
+        }, { passive: false });
+        
+        // Handle mouse/pointer devices (won't fire if touch was handled)
+        addBtn.addEventListener('click', (e) => {
+            if (touchHandled) return;
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[Admin] Add Product button clicked (mouse)');
+            openAddProductModal();
+        });
     }
     
     // Attach search functionality
@@ -762,10 +773,23 @@ function renderProductsTable(products) {
         `;
         container.innerHTML = html;
         
-        // Attach click handlers to cards
+        // Attach click handlers to cards with touch support
         document.querySelectorAll('.product-card').forEach(card => {
-            card.addEventListener('click', () => {
+            let touchHandled = false;
+            
+            card.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                touchHandled = true;
                 const productId = card.dataset.productId;
+                console.log('[Admin] Product card tapped (touch):', productId);
+                editProduct(productId);
+                setTimeout(() => { touchHandled = false; }, 500);
+            }, { passive: false });
+            
+            card.addEventListener('click', (e) => {
+                if (touchHandled) return;
+                const productId = card.dataset.productId;
+                console.log('[Admin] Product card clicked (mouse):', productId);
                 editProduct(productId);
             });
         });
