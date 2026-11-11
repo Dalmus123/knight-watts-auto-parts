@@ -7,6 +7,7 @@ let supabaseClient = null;
 let currentUser = null;
 let currentUserProfile = null;
 let currentRoute = 'dashboard';
+let allProducts = []; // Store all products for filtering
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
@@ -650,16 +651,41 @@ async function loadProducts() {
         </div>
     `;
     
-    // Attach event listener for Add Product button
+    // Load products first
+    await refreshProductsTable();
+    
+    // Attach event listener for Add Product button (after products are loaded)
     const addBtn = document.getElementById('addProductBtn');
     if (addBtn) {
-        addBtn.addEventListener('click', () => {
+        let touchHandled = false;
+        
+        // Handle touch devices
+        addBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            touchHandled = true;
+            console.log('[Admin] Add Product button tapped (touch)');
+            openAddProductModal();
+            setTimeout(() => { touchHandled = false; }, 500);
+        }, { passive: false });
+        
+        // Handle mouse/pointer devices (won't fire if touch was handled)
+        addBtn.addEventListener('click', (e) => {
+            if (touchHandled) return;
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[Admin] Add Product button clicked (mouse)');
             openAddProductModal();
         });
     }
     
-    // Load products
-    await refreshProductsTable();
+    // Attach search functionality
+    const searchInput = document.getElementById('productSearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            filterProducts(e.target.value);
+        });
+    }
 }
 
 async function refreshProductsTable() {
@@ -671,11 +697,32 @@ async function refreshProductsTable() {
         
         if (error) throw error;
         
-        renderProductsTable(products);
+        allProducts = products || [];
+        renderProductsTable(allProducts);
     } catch (error) {
         console.error('Load products error:', error);
         showError('Failed to load products');
     }
+}
+
+function filterProducts(searchTerm) {
+    if (!searchTerm || searchTerm.trim() === '') {
+        renderProductsTable(allProducts);
+        return;
+    }
+    
+    const term = searchTerm.toLowerCase().trim();
+    const filtered = allProducts.filter(product => {
+        return (
+            product.name?.toLowerCase().includes(term) ||
+            product.category?.toLowerCase().includes(term) ||
+            product.location?.toLowerCase().includes(term) ||
+            product.sku?.toLowerCase().includes(term) ||
+            product.manufacturer?.toLowerCase().includes(term)
+        );
+    });
+    
+    renderProductsTable(filtered);
 }
 
 function renderProductsTable(products) {
@@ -726,10 +773,23 @@ function renderProductsTable(products) {
         `;
         container.innerHTML = html;
         
-        // Attach click handlers to cards
+        // Attach click handlers to cards with touch support
         document.querySelectorAll('.product-card').forEach(card => {
-            card.addEventListener('click', () => {
+            let touchHandled = false;
+            
+            card.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                touchHandled = true;
                 const productId = card.dataset.productId;
+                console.log('[Admin] Product card tapped (touch):', productId);
+                editProduct(productId);
+                setTimeout(() => { touchHandled = false; }, 500);
+            }, { passive: false });
+            
+            card.addEventListener('click', (e) => {
+                if (touchHandled) return;
+                const productId = card.dataset.productId;
+                console.log('[Admin] Product card clicked (mouse):', productId);
                 editProduct(productId);
             });
         });
