@@ -132,6 +132,14 @@ async function trackCheckoutStart() {
 }
 
 // Custom Part Request Submission
+function normalizePaymentMethod(method) {
+    const normalized = String(method || 'cash').toLowerCase().replace(/[^a-z]/g, '');
+    if (normalized === 'mpesa' || normalized === 'cash' || normalized === 'bank') {
+        return normalized;
+    }
+    return 'cash';
+}
+
 async function submitCustomPartRequest(requestData) {
     if (!backendEnabled || !backendClient) {
         // Fallback: show message to user
@@ -141,30 +149,28 @@ async function submitCustomPartRequest(requestData) {
     }
     
     try {
-        const { data, error } = await backendClient
-            .from('custom_part_requests')
-            .insert({
-                customer_name: requestData.name,
-                customer_email: requestData.email,
-                customer_phone: requestData.phone,
-                customer_location: requestData.location || 'Not specified',
-                part_name: requestData.partName,
-                description: requestData.description,
-                vehicle_make: requestData.vehicleMake || null,
-                vehicle_model: requestData.vehicleModel || null,
-                vehicle_year: requestData.vehicleYear ? parseInt(requestData.vehicleYear) : null,
-                is_3d_print: requestData.is3DPrint || false,
-                print_material: requestData.printMaterial || null,
-                preferred_color: requestData.preferredColor || null,
-                quantity: requestData.quantity || 1,
-                dimensions: requestData.dimensions || null,
-                request_type: requestData.is3DPrint ? '3d_print' : 'custom_part',
-                status: 'pending'
-            })
-            .select()
-            .single();
+        // Direct anon inserts are denied — use SECURITY DEFINER RPC (POST, never { get: true })
+        const { data, error } = await backendClient.rpc('create_custom_part_request', {
+            p_customer_name: requestData.name,
+            p_customer_email: requestData.email,
+            p_customer_phone: requestData.phone,
+            p_part_name: requestData.partName,
+            p_description: requestData.description,
+            p_customer_location: requestData.location || null,
+            p_vehicle_make: requestData.vehicleMake || null,
+            p_vehicle_model: requestData.vehicleModel || null,
+            p_vehicle_year: requestData.vehicleYear ? parseInt(requestData.vehicleYear, 10) : null,
+            p_is_3d_print: Boolean(requestData.is3DPrint),
+            p_print_material: requestData.printMaterial || null,
+            p_preferred_color: requestData.preferredColor || null,
+            p_quantity: requestData.quantity || 1,
+            p_dimensions: requestData.dimensions || null
+        });
         
         if (error) throw error;
+        
+        const row = Array.isArray(data) ? data[0] : data;
+        if (!row) throw new Error('No request was created');
         
         // Track the request submission
         await backendClient
@@ -173,12 +179,12 @@ async function submitCustomPartRequest(requestData) {
                 event_type: 'custom_request_submitted',
                 session_id: sessionId,
                 event_data: {
-                    request_number: data.request_number,
-                    request_type: data.request_type
+                    request_number: row.request_number,
+                    request_type: requestData.is3DPrint ? '3d_print' : 'custom_part'
                 }
             });
         
-        return { success: true, data };
+        return { success: true, data: row };
     } catch (error) {
         console.error('Submit request error:', error);
         return { success: false, error: error.message };
@@ -194,26 +200,22 @@ async function submitOrder(orderData) {
     }
     
     try {
-        const { data, error } = await backendClient
-            .from('orders')
-            .insert({
-                customer_name: orderData.name,
-                customer_email: orderData.email,
-                customer_phone: orderData.phone,
-                customer_location: orderData.location,
-                items: orderData.items,
-                subtotal_kes: orderData.subtotal,
-                shipping_kes: orderData.shipping || 0,
-                total_kes: orderData.total,
-                shipping_address: orderData.shippingAddress,
-                delivery_notes: orderData.notes || null,
-                payment_method: orderData.paymentMethod || 'M-Pesa',
-                status: 'pending'
-            })
-            .select()
-            .single();
+        // Direct anon inserts are denied — use SECURITY DEFINER RPC (POST, never { get: true })
+        const { data, error } = await backendClient.rpc('create_order', {
+            p_customer_name: orderData.name,
+            p_customer_email: orderData.email,
+            p_customer_phone: orderData.phone,
+            p_customer_location: orderData.location,
+            p_items: orderData.items,
+            p_shipping_address: orderData.shippingAddress || null,
+            p_delivery_notes: orderData.notes || null,
+            p_payment_method: normalizePaymentMethod(orderData.paymentMethod)
+        });
         
         if (error) throw error;
+        
+        const row = Array.isArray(data) ? data[0] : data;
+        if (!row) throw new Error('No order was created');
         
         // Track the order
         await backendClient
@@ -222,12 +224,12 @@ async function submitOrder(orderData) {
                 event_type: 'order_placed',
                 session_id: sessionId,
                 event_data: {
-                    order_number: data.order_number,
-                    total_kes: data.total_kes
+                    order_number: row.order_number,
+                    total_kes: row.total_kes
                 }
             });
         
-        return { success: true, data };
+        return { success: true, data: row };
     } catch (error) {
         console.error('Submit order error:', error);
         return { success: false, error: error.message };
