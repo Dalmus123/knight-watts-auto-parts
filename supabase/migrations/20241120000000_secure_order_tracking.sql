@@ -1,0 +1,53 @@
+-- Knight Watts Auto Parts — Public RPC contracts (already applied live)
+--
+-- Live project selvxrprxbkznxtfesxe already has these via:
+--   20261120172805_kw_close_leaking_views
+--   20261120172821_kw_track_order_rpc
+--   20261120172904_kw_restrict_public_inserts
+--
+-- Do NOT re-apply against the live database. This file documents the
+-- contracts the storefront expects so other environments can match them.
+--
+-- Customer Auth note:
+--   Storefront signup uses Supabase Auth only (auth.users). New customers
+--   must NEVER receive a user_profiles row. Staff roles remain:
+--   owner | admin | print_operator | hq_readonly
+--   Admin UI admits only those four roles; everyone else is signed out.
+--   RLS on user_profiles already blocks non-owner inserts.
+--
+-- ==============================================
+-- track_order(p_order_number text, p_contact text)
+-- Returns at most one row. Contact may be email or phone
+-- (07…, 2547…, +2547… all match). Writes rate-limit rows → call via POST
+-- (never { get: true }).
+-- Columns:
+--   order_number, status, payment_status, subtotal_kes, shipping_kes,
+--   total_kes, order_date, delivery_status, delivery_area, scheduled_date,
+--   scheduled_time_slot, estimated_arrival, courier_service, delivered_at
+-- GRANT EXECUTE TO anon, authenticated
+-- ==============================================
+--
+-- ==============================================
+-- create_order(
+--   p_customer_name, p_customer_email, p_customer_phone, p_customer_location,
+--   p_items jsonb, p_shipping_address, p_delivery_notes,
+--   p_payment_method  -- mpesa | cash | bank
+-- )
+-- Direct anon INSERT on orders is denied. Use this RPC instead (POST).
+-- Returns: id, order_number, total_kes
+-- GRANT EXECUTE TO anon, authenticated
+-- ==============================================
+--
+-- ==============================================
+-- create_custom_part_request(
+--   p_customer_name, p_customer_email, p_customer_phone, p_part_name,
+--   p_description, p_customer_location, p_vehicle_make, p_vehicle_model,
+--   p_vehicle_year int, p_is_3d_print bool, p_print_material,
+--   p_preferred_color, p_quantity int, p_dimensions
+-- )
+-- Direct anon INSERT on custom_part_requests is denied. Use this RPC (POST).
+-- Returns: id, request_number
+-- GRANT EXECUTE TO anon, authenticated
+-- ==============================================
+
+SELECT 1; -- no-op marker so the migration file remains valid SQL

@@ -8,6 +8,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase/config.js"></script>
     <style>
         .auth-container {
             min-height: 100vh;
@@ -323,8 +325,13 @@
 
                 <label class="terms-agreement">
                     <input type="checkbox" id="agreeTerms" required>
-                    <span>I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a></span>
+                    <span>I agree to the <a href="#">Terms of Service</a> and <a href="privacy-notice.html">Privacy Policy</a></span>
                 </label>
+                
+                <p style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.6); margin-bottom: 16px; text-align: center;">
+                    By creating an account, you agree to our processing of your personal data in accordance with Kenya's Data Protection Act, 2019. 
+                    <a href="privacy-notice.html" style="color: #ADB5BD;">Learn more</a>
+                </p>
 
                 <button type="submit" class="auth-btn">Create Account</button>
             </form>
@@ -350,6 +357,31 @@
     </div>
 
     <script>
+        let supabaseClient = null;
+
+        // Initialize Supabase on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Check if Supabase is configured
+            if (!isConfigured()) {
+                showError('Service temporarily unavailable. Please try again later.');
+                return;
+            }
+            
+            // Initialize Supabase client
+            supabaseClient = initSupabase();
+            
+            if (!supabaseClient) {
+                showError('Service temporarily unavailable. Please try again later.');
+                return;
+            }
+
+            // Check if already logged in
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
+                window.location.href = 'index.html';
+            }
+        });
+
         function checkPasswordStrength() {
             const password = document.getElementById('password').value;
             const requirements = document.getElementById('passwordRequirements');
@@ -396,8 +428,13 @@
             return true;
         }
 
-        function handleSignup(event) {
+        async function handleSignup(event) {
             event.preventDefault();
+            
+            if (!supabaseClient) {
+                showError('Service temporarily unavailable. Please try again later.');
+                return;
+            }
             
             const firstName = document.getElementById('firstName').value.trim();
             const lastName = document.getElementById('lastName').value.trim();
@@ -418,63 +455,80 @@
                 return;
             }
 
-            // Get existing users
-            const users = JSON.parse(localStorage.getItem('users')) || [];
-            
-            // Check if email already exists
-            if (users.find(u => u.email === email)) {
-                showError('An account with this email already exists. Please sign in instead.');
+            // Disable submit button to prevent double-submission
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating Account...';
+
+            try {
+                // Sign up with Supabase Auth
+                const { data, error } = await supabaseClient.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            full_name: `${firstName} ${lastName}`,
+                            first_name: firstName,
+                            last_name: lastName,
+                            phone: phone
+                        }
+                    }
+                });
+
+                if (error) throw error;
+
+                // Check if email confirmation is required
+                if (data.user && !data.session) {
+                    showSuccess('Account created! Please check your email to confirm your account before signing in.');
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 3000);
+                } else if (data.session) {
+                    // Auto-signed in (email confirmation disabled)
+                    showSuccess('Account created successfully! Redirecting...');
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1500);
+                }
+            } catch (error) {
+                console.error('Signup error:', error);
+                
+                // Handle specific error cases
+                if (error.message.includes('already registered')) {
+                    showError('An account with this email already exists. Please sign in instead.');
+                } else if (error.message.includes('password')) {
+                    showError('Password does not meet requirements. Please try a stronger password.');
+                } else {
+                    showError(error.message || 'Failed to create account. Please try again.');
+                }
+                
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        }
+
+        async function signupWithGoogle() {
+            if (!supabaseClient) {
+                alert('Service temporarily unavailable. Please try again later.');
                 return;
             }
 
-            // Create new user
-            const newUser = {
-                id: 'USER' + Date.now(),
-                firstName,
-                lastName,
-                name: `${firstName} ${lastName}`,
-                email,
-                phone,
-                password, // In production, hash this with bcrypt!
-                createdAt: new Date().toISOString(),
-                lastLogin: null,
-                orders: [],
-                wishlist: [],
-                addresses: []
-            };
+            try {
+                const { data, error } = await supabaseClient.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                        redirectTo: window.location.origin + '/index.html'
+                    }
+                });
 
-            // Save user
-            users.push(newUser);
-            localStorage.setItem('users', JSON.stringify(users));
-
-            // Auto-login
-            const session = {
-                userId: newUser.id,
-                email: newUser.email,
-                name: newUser.name,
-                loginTime: new Date().toISOString()
-            };
-            localStorage.setItem('userSession', JSON.stringify(session));
-
-            showSuccess('Account created successfully! Redirecting...');
-            
-            setTimeout(() => {
-                window.location.href = 'index.html';
-            }, 1500);
-        }
-
-        function signupWithGoogle() {
-            // In production, integrate with Google OAuth
-            alert('Google Sign-Up will be integrated with Google OAuth API.\n\nFor now, please use email/password signup.');
-        }
-
-        // Check if already logged in
-        window.addEventListener('DOMContentLoaded', () => {
-            const session = localStorage.getItem('userSession') || sessionStorage.getItem('userSession');
-            if (session) {
-                window.location.href = 'index.html';
+                if (error) throw error;
+            } catch (error) {
+                console.error('Google signup error:', error);
+                alert('Google Sign-Up is not configured yet. Please use email/password signup.');
             }
-        });
+        }
     </script>
 </body>
 </html>

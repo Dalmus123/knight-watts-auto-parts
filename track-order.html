@@ -251,18 +251,32 @@
     <div class="tracking-container">
         <div class="tracking-search">
             <h1>Track Your Order</h1>
-            <p>Enter your order number to see the current status and delivery information</p>
+            <p>Enter your order number and contact information to track your delivery</p>
             
-            <form class="tracking-form" id="trackingForm">
-                <input 
-                    type="text" 
-                    id="orderNumberInput" 
-                    placeholder="e.g., ORD-20241104-0001" 
-                    required
-                    pattern="ORD-\d{8}-\d{4}"
-                >
-                <button type="submit" class="btn btn-primary">Track</button>
+            <form class="tracking-form" id="trackingForm" style="max-width: 600px;">
+                <div style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
+                    <input 
+                        type="text" 
+                        id="orderNumberInput" 
+                        placeholder="Order Number (e.g., ORD-20241104-0001)" 
+                        required
+                        pattern="ORD-\d{8}-\d{4}"
+                        style="flex: 1;"
+                    >
+                    <input 
+                        type="text" 
+                        id="contactInput" 
+                        placeholder="Email or phone (07… / 2547… / +2547…)" 
+                        required
+                        autocomplete="tel"
+                        style="flex: 1;"
+                    >
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Track Order</button>
+                </div>
             </form>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 16px;">
+                For security, we need to verify your identity. Enter the email or phone number used when placing the order.
+            </p>
         </div>
 
         <div id="loadingState" class="tracking-result" style="display: none;">
@@ -282,12 +296,13 @@
     </div>
 
     <script>
-        let supabase = null;
+        // Do not name this `supabase` — that identifier is used by the CDN UMD global
+        let trackingClient = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             // Initialize Supabase
             if (typeof isConfigured === 'function' && isConfigured()) {
-                supabase = initSupabase();
+                trackingClient = initSupabase();
             }
 
             // Handle form submission
@@ -297,12 +312,13 @@
         async function handleTrackOrder(e) {
             e.preventDefault();
 
-            if (!supabase) {
+            if (!trackingClient) {
                 showError('Order tracking is not available. Please contact us directly.');
                 return;
             }
 
             const orderNumber = document.getElementById('orderNumberInput').value.trim();
+            const contact = document.getElementById('contactInput').value.trim();
             
             // Hide previous results
             document.getElementById('errorMessage').classList.remove('active');
@@ -310,25 +326,29 @@
             document.getElementById('loadingState').style.display = 'block';
 
             try {
-                // Query the public tracking view
-                const { data, error } = await supabase
-                    .from('public_order_tracking')
-                    .select('*')
-                    .eq('order_number', orderNumber)
-                    .single();
+                // Call the secure RPC function via POST (default). Never use { get: true }.
+                const { data, error } = await trackingClient
+                    .rpc('track_order', {
+                        p_order_number: orderNumber,
+                        p_contact: contact
+                    });
 
                 document.getElementById('loadingState').style.display = 'none';
 
                 if (error) {
-                    if (error.code === 'PGRST116') {
-                        showError('Order not found. Please check your order number and try again.');
-                    } else {
-                        showError('Failed to retrieve order information. Please try again later.');
-                    }
+                    console.error('RPC error:', error);
+                    showError('Failed to retrieve order information. Please try again later.');
                     return;
                 }
 
-                displayOrderTracking(data);
+                // Check if we got a result
+                if (!data || data.length === 0) {
+                    showError('Order not found or contact information does not match. Please verify your order number and email/phone.');
+                    return;
+                }
+
+                // Display the first (and only) result
+                displayOrderTracking(data[0]);
 
             } catch (error) {
                 document.getElementById('loadingState').style.display = 'none';
@@ -339,6 +359,8 @@
 
         function displayOrderTracking(orderData) {
             const result = document.getElementById('trackingResult');
+            const orderStatus = orderData.status;
+            const hasDelivery = Boolean(orderData.delivery_status);
             
             // Build timeline based on order and delivery status
             const timeline = buildTimeline(orderData);
@@ -350,7 +372,26 @@
                         <p>Placed on ${formatDate(orderData.order_date)}</p>
                     </div>
                     <div>
-                        <span class="status-badge ${orderData.order_status}">${formatStatus(orderData.order_status)}</span>
+                        <span class="status-badge ${orderStatus}">${formatStatus(orderStatus)}</span>
+                    </div>
+                </div>
+
+                <div class="order-totals" style="margin: 20px 0; padding: 16px; background: rgba(255,255,255,0.03); border-radius: 12px;">
+                    <div class="detail-row">
+                        <span class="detail-label">Payment</span>
+                        <span class="detail-value">${formatStatus(orderData.payment_status || 'unknown')}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Subtotal</span>
+                        <span class="detail-value">KES ${Number(orderData.subtotal_kes || 0).toLocaleString()}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Shipping</span>
+                        <span class="detail-value">KES ${Number(orderData.shipping_kes || 0).toLocaleString()}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Total</span>
+                        <span class="detail-value"><strong>KES ${Number(orderData.total_kes || 0).toLocaleString()}</strong></span>
                     </div>
                 </div>
 
@@ -359,12 +400,12 @@
                     ${timeline}
                 </div>
 
-                ${orderData.delivery_number ? `
+                ${hasDelivery ? `
                     <div class="delivery-details">
                         <h3>Delivery Information</h3>
                         <div class="detail-row">
-                            <span class="detail-label">Delivery Number</span>
-                            <span class="detail-value">${orderData.delivery_number}</span>
+                            <span class="detail-label">Status</span>
+                            <span class="detail-value">${formatStatus(orderData.delivery_status)}</span>
                         </div>
                         <div class="detail-row">
                             <span class="detail-label">Delivery Area</span>
@@ -386,16 +427,16 @@
                                 <span class="detail-value">${orderData.courier_service}</span>
                             </div>
                         ` : ''}
-                        ${orderData.current_location ? `
-                            <div class="detail-row">
-                                <span class="detail-label">Current Location</span>
-                                <span class="detail-value">${orderData.current_location}</span>
-                            </div>
-                        ` : ''}
                         ${orderData.estimated_arrival ? `
                             <div class="detail-row">
                                 <span class="detail-label">Estimated Arrival</span>
                                 <span class="detail-value">${formatDateTime(orderData.estimated_arrival)}</span>
+                            </div>
+                        ` : ''}
+                        ${orderData.delivered_at ? `
+                            <div class="detail-row">
+                                <span class="detail-label">Delivered At</span>
+                                <span class="detail-value">${formatDateTime(orderData.delivered_at)}</span>
                             </div>
                         ` : ''}
                     </div>
@@ -420,8 +461,8 @@
                 { key: 'confirmed', label: 'Confirmed', description: 'Your order has been confirmed and is ready for delivery' },
             ];
 
-            // Add delivery statuses if delivery exists
-            if (orderData.delivery_number) {
+            // Add delivery statuses when the RPC returned delivery fields
+            if (orderData.delivery_status) {
                 if (orderData.delivery_status === 'scheduled') {
                     statuses.push({ key: 'scheduled', label: 'Delivery Scheduled', description: `Scheduled for ${formatDate(orderData.scheduled_date)}` });
                 } else if (orderData.delivery_status === 'in_transit') {
@@ -433,9 +474,9 @@
                 }
             }
 
-            // Determine current status
-            const currentOrderStatus = orderData.order_status;
+            const currentOrderStatus = orderData.status;
             const currentDeliveryStatus = orderData.delivery_status;
+            const activeIndex = statuses.findIndex(s => s.key === currentOrderStatus || s.key === currentDeliveryStatus);
 
             let html = '';
             statuses.forEach((status, index) => {
@@ -443,7 +484,7 @@
                 
                 if (status.key === currentOrderStatus || status.key === currentDeliveryStatus) {
                     statusClass = 'active';
-                } else if (index < statuses.findIndex(s => s.key === currentOrderStatus || s.key === currentDeliveryStatus)) {
+                } else if (activeIndex >= 0 && index < activeIndex) {
                     statusClass = 'completed';
                 }
 
@@ -490,7 +531,8 @@
         }
 
         function formatStatus(status) {
-            return status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+            if (!status) return 'Unknown';
+            return String(status).replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         }
     </script>
 </body>

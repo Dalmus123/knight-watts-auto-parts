@@ -171,6 +171,22 @@ async function handleLogout() {
     }
 }
 
+async function denyStaffAccess(message) {
+    showLoginScreen();
+    const errorDiv = document.getElementById('loginError');
+    if (errorDiv) {
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+    } else {
+        alert(message);
+    }
+    try {
+        await supabaseClient.auth.signOut();
+    } catch (error) {
+        console.error('Sign-out after denied access failed:', error);
+    }
+}
+
 async function loadUserProfile(user) {
     try {
         const { data: profile, error } = await supabaseClient
@@ -181,12 +197,18 @@ async function loadUserProfile(user) {
         
         if (error) {
             if (error.code === 'PGRST116') {
-                // Profile doesn't exist
-                showError('Your account has not been set up yet. Please contact the system administrator.');
-                await supabaseClient.auth.signOut();
+                // Profile doesn't exist — customer or unset account; not staff
+                await denyStaffAccess('This account is not authorized for the admin panel. You have been signed out.');
                 return;
             }
             throw error;
+        }
+        
+        // Validate staff access - only allow owner, admin, hq_readonly, and print_operator
+        const allowedRoles = ['owner', 'admin', 'hq_readonly', 'print_operator'];
+        if (!allowedRoles.includes(profile.role)) {
+            await denyStaffAccess('Access denied. This admin panel is for staff only. You have been signed out.');
+            return;
         }
         
         currentUser = user;

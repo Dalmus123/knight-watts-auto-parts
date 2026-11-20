@@ -8,6 +8,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase/config.js"></script>
     <style>
         .auth-container {
             min-height: 100vh;
@@ -315,6 +317,32 @@
     </div>
 
     <script>
+        let supabaseClient = null;
+
+        // Initialize Supabase on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Check if Supabase is configured
+            if (!isConfigured()) {
+                showError('Service temporarily unavailable. Please try again later.');
+                return;
+            }
+            
+            // Initialize Supabase client
+            supabaseClient = initSupabase();
+            
+            if (!supabaseClient) {
+                showError('Service temporarily unavailable. Please try again later.');
+                return;
+            }
+
+            // Check if already logged in
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
+                const returnUrl = new URLSearchParams(window.location.search).get('return') || 'index.html';
+                window.location.href = returnUrl;
+            }
+        });
+
         function togglePassword() {
             const passwordInput = document.getElementById('password');
             passwordInput.type = passwordInput.type === 'password' ? 'text' : 'password';
@@ -335,72 +363,78 @@
             successDiv.style.display = 'block';
         }
 
-        function handleLogin(event) {
+        async function handleLogin(event) {
             event.preventDefault();
             
-            const email = document.getElementById('email').value;
+            if (!supabaseClient) {
+                showError('Service temporarily unavailable. Please try again later.');
+                return;
+            }
+            
+            const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
-            const rememberMe = document.getElementById('rememberMe').checked;
 
-            // Get registered users
-            const users = JSON.parse(localStorage.getItem('users')) || [];
-            
-            // Find user
-            const user = users.find(u => u.email === email);
-            
-            if (!user) {
-                showError('No account found with this email. Please sign up first.');
+            // Disable submit button to prevent double-submission
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Signing In...';
+
+            try {
+                // Sign in with Supabase Auth
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                if (error) throw error;
+
+                showSuccess('Login successful! Redirecting...');
+                
+                // Redirect to home or return URL
+                setTimeout(() => {
+                    const returnUrl = new URLSearchParams(window.location.search).get('return') || 'index.html';
+                    window.location.href = returnUrl;
+                }, 1000);
+            } catch (error) {
+                console.error('Login error:', error);
+                
+                // Handle specific error cases
+                if (error.message.includes('Invalid login credentials')) {
+                    showError('Invalid email or password. Please try again.');
+                } else if (error.message.includes('Email not confirmed')) {
+                    showError('Please confirm your email address before signing in. Check your inbox.');
+                } else {
+                    showError(error.message || 'Failed to sign in. Please try again.');
+                }
+                
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        }
+
+        async function loginWithGoogle() {
+            if (!supabaseClient) {
+                alert('Service temporarily unavailable. Please try again later.');
                 return;
             }
 
-            // Check password (In production, use proper password hashing!)
-            if (user.password !== password) {
-                showError('Incorrect password. Please try again.');
-                return;
-            }
-
-            // Create session
-            const session = {
-                userId: user.id,
-                email: user.email,
-                name: user.name,
-                loginTime: new Date().toISOString(),
-                rememberMe: rememberMe
-            };
-
-            // Save session
-            if (rememberMe) {
-                localStorage.setItem('userSession', JSON.stringify(session));
-            } else {
-                sessionStorage.setItem('userSession', JSON.stringify(session));
-            }
-
-            // Update last login
-            user.lastLogin = new Date().toISOString();
-            localStorage.setItem('users', JSON.stringify(users));
-
-            showSuccess('Login successful! Redirecting...');
-            
-            // Redirect to home or return URL
-            setTimeout(() => {
+            try {
                 const returnUrl = new URLSearchParams(window.location.search).get('return') || 'index.html';
-                window.location.href = returnUrl;
-            }, 1000);
-        }
+                const { data, error } = await supabaseClient.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                        redirectTo: window.location.origin + '/' + returnUrl
+                    }
+                });
 
-        function loginWithGoogle() {
-            // In production, integrate with Google OAuth
-            alert('Google Sign-In will be integrated with Google OAuth API.\n\nFor now, please use email/password or sign up.');
-        }
-
-        // Check if already logged in
-        window.addEventListener('DOMContentLoaded', () => {
-            const session = localStorage.getItem('userSession') || sessionStorage.getItem('userSession');
-            if (session) {
-                const returnUrl = new URLSearchParams(window.location.search).get('return') || 'index.html';
-                window.location.href = returnUrl;
+                if (error) throw error;
+            } catch (error) {
+                console.error('Google login error:', error);
+                alert('Google Sign-In is not configured yet. Please use email/password login.');
             }
-        });
+        }
     </script>
 </body>
 </html>
