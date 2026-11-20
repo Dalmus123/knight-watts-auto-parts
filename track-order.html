@@ -296,12 +296,13 @@
     </div>
 
     <script>
-        let supabase = null;
+        // Do not name this `supabase` — that identifier is used by the CDN UMD global
+        let trackingClient = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             // Initialize Supabase
             if (typeof isConfigured === 'function' && isConfigured()) {
-                supabase = initSupabase();
+                trackingClient = initSupabase();
             }
 
             // Handle form submission
@@ -311,7 +312,7 @@
         async function handleTrackOrder(e) {
             e.preventDefault();
 
-            if (!supabase) {
+            if (!trackingClient) {
                 showError('Order tracking is not available. Please contact us directly.');
                 return;
             }
@@ -325,8 +326,8 @@
             document.getElementById('loadingState').style.display = 'block';
 
             try {
-                // Call the secure RPC function
-                const { data, error } = await supabase
+                // Call the secure RPC function via POST (default). Never use { get: true }.
+                const { data, error } = await trackingClient
                     .rpc('track_order', {
                         p_order_number: orderNumber,
                         p_contact: contact
