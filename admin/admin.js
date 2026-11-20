@@ -189,6 +189,14 @@ async function loadUserProfile(user) {
             throw error;
         }
         
+        // Validate staff access - only allow owner, admin, hq_readonly, and print_operator
+        const allowedRoles = ['owner', 'admin', 'hq_readonly', 'print_operator'];
+        if (!allowedRoles.includes(profile.role)) {
+            showError('Access denied. This admin panel is for staff only. You have been signed out.');
+            await supabaseClient.auth.signOut();
+            return;
+        }
+        
         currentUser = user;
         currentUserProfile = profile;
         

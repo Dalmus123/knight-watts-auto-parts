@@ -251,18 +251,31 @@
     <div class="tracking-container">
         <div class="tracking-search">
             <h1>Track Your Order</h1>
-            <p>Enter your order number to see the current status and delivery information</p>
+            <p>Enter your order number and contact information to track your delivery</p>
             
-            <form class="tracking-form" id="trackingForm">
-                <input 
-                    type="text" 
-                    id="orderNumberInput" 
-                    placeholder="e.g., ORD-20241104-0001" 
-                    required
-                    pattern="ORD-\d{8}-\d{4}"
-                >
-                <button type="submit" class="btn btn-primary">Track</button>
+            <form class="tracking-form" id="trackingForm" style="max-width: 600px;">
+                <div style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
+                    <input 
+                        type="text" 
+                        id="orderNumberInput" 
+                        placeholder="Order Number (e.g., ORD-20241104-0001)" 
+                        required
+                        pattern="ORD-\d{8}-\d{4}"
+                        style="flex: 1;"
+                    >
+                    <input 
+                        type="text" 
+                        id="contactInput" 
+                        placeholder="Email or Phone Number" 
+                        required
+                        style="flex: 1;"
+                    >
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Track Order</button>
+                </div>
             </form>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 16px;">
+                For security, we need to verify your identity. Enter the email or phone number used when placing the order.
+            </p>
         </div>
 
         <div id="loadingState" class="tracking-result" style="display: none;">
@@ -303,6 +316,7 @@
             }
 
             const orderNumber = document.getElementById('orderNumberInput').value.trim();
+            const contact = document.getElementById('contactInput').value.trim();
             
             // Hide previous results
             document.getElementById('errorMessage').classList.remove('active');
@@ -310,25 +324,29 @@
             document.getElementById('loadingState').style.display = 'block';
 
             try {
-                // Query the public tracking view
+                // Call the secure RPC function
                 const { data, error } = await supabase
-                    .from('public_order_tracking')
-                    .select('*')
-                    .eq('order_number', orderNumber)
-                    .single();
+                    .rpc('track_order', {
+                        p_order_number: orderNumber,
+                        p_contact: contact
+                    });
 
                 document.getElementById('loadingState').style.display = 'none';
 
                 if (error) {
-                    if (error.code === 'PGRST116') {
-                        showError('Order not found. Please check your order number and try again.');
-                    } else {
-                        showError('Failed to retrieve order information. Please try again later.');
-                    }
+                    console.error('RPC error:', error);
+                    showError('Failed to retrieve order information. Please try again later.');
                     return;
                 }
 
-                displayOrderTracking(data);
+                // Check if we got a result
+                if (!data || data.length === 0) {
+                    showError('Order not found or contact information does not match. Please verify your order number and email/phone.');
+                    return;
+                }
+
+                // Display the first (and only) result
+                displayOrderTracking(data[0]);
 
             } catch (error) {
                 document.getElementById('loadingState').style.display = 'none';

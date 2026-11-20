@@ -56,6 +56,15 @@
                         </svg>
                         <span id="currentLocation">All Locations</span>
                     </button>
+                    <div id="accountIndicator" style="display: none; margin: 0 8px;">
+                        <button class="location-btn" id="accountBtn" title="Account" style="gap: 8px;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                            <span id="accountName">Account</span>
+                        </button>
+                    </div>
                     <button class="cart-btn" onclick="window.location.href='checkout.html'" title="View Cart & Checkout">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="9" cy="21" r="1"></circle>
@@ -357,5 +366,70 @@
     <script src="app.js"></script>
     <script src="grokbot.js"></script>
     <script src="ai-chat-widget.js"></script>
+    
+    <!-- Account State Management -->
+    <script>
+        (async function() {
+            try {
+                if (typeof initSupabase === 'function' && isConfigured()) {
+                    const supabase = initSupabase();
+                    const { data: { session } } = await supabase.auth.getSession();
+                    
+                    const accountIndicator = document.getElementById('accountIndicator');
+                    const accountBtn = document.getElementById('accountBtn');
+                    const accountName = document.getElementById('accountName');
+                    
+                    if (session && session.user) {
+                        // User is signed in
+                        accountIndicator.style.display = 'block';
+                        
+                        const firstName = session.user.user_metadata?.first_name || 
+                                        session.user.user_metadata?.full_name?.split(' ')[0] || 
+                                        session.user.email?.split('@')[0];
+                        accountName.textContent = firstName;
+                        
+                        // Create account dropdown menu
+                        accountBtn.onclick = function(e) {
+                            e.stopPropagation();
+                            const dropdown = document.createElement('div');
+                            dropdown.style.cssText = 'position: absolute; top: 100%; right: 0; background: var(--dark-card); border: 1px solid var(--dark-border); border-radius: 8px; padding: 8px; margin-top: 8px; min-width: 160px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 1000;';
+                            dropdown.innerHTML = `
+                                <div style="padding: 12px 16px; border-bottom: 1px solid var(--dark-border); margin-bottom: 8px;">
+                                    <div style="font-weight: 600; margin-bottom: 4px;">${session.user.user_metadata?.full_name || 'Account'}</div>
+                                    <div style="font-size: 0.85rem; color: var(--text-muted);">${session.user.email}</div>
+                                </div>
+                                <a href="track-order.html" style="display: block; padding: 10px 16px; color: var(--text-primary); text-decoration: none; border-radius: 4px;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">Track Orders</a>
+                                <button onclick="handleSignOut()" style="display: block; width: 100%; text-align: left; padding: 10px 16px; background: none; border: none; color: #ef4444; cursor: pointer; border-radius: 4px; font-size: 1rem;" onmouseover="this.style.background='rgba(239,68,68,0.1)'" onmouseout="this.style.background='transparent'">Sign Out</button>
+                            `;
+                            accountBtn.parentElement.style.position = 'relative';
+                            accountBtn.parentElement.appendChild(dropdown);
+                            
+                            // Close dropdown when clicking outside
+                            setTimeout(() => {
+                                document.addEventListener('click', function closeDropdown() {
+                                    dropdown.remove();
+                                    document.removeEventListener('click', closeDropdown);
+                                });
+                            }, 100);
+                        };
+                        
+                        window.handleSignOut = async function() {
+                            await supabase.auth.signOut();
+                            window.location.reload();
+                        };
+                    } else {
+                        // User is not signed in - show sign in button
+                        accountIndicator.style.display = 'block';
+                        accountName.textContent = 'Sign In';
+                        accountBtn.onclick = function() {
+                            window.location.href = 'login.html';
+                        };
+                    }
+                }
+            } catch (error) {
+                console.error('Account state error:', error);
+            }
+        })();
+    </script>
 </body>
 </html>
