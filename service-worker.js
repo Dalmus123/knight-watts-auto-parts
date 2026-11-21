@@ -14,6 +14,8 @@ const STATIC_ASSETS = [
   basePath + '/',
   basePath + '/index.html',
   basePath + '/checkout.html',
+  basePath + '/checkout.css',
+  basePath + '/terms.html',
   basePath + '/3d-printing.html',
   basePath + '/login.html',
   basePath + '/signup.html',

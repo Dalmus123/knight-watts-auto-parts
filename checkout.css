@@ -1,0 +1,767 @@
+/**
+ * Checkout / cart page styles — high-contrast black & white
+ * Scoped to checkout page classes so the rest of the storefront is unaffected.
+ * Target: WCAG AA (4.5:1) for body text, labels, inputs, placeholders, totals,
+ * errors, and disabled states.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+
+/* ---- Page shell ---- */
+body.checkout-page {
+    background: #000000;
+    color: #ffffff;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+.checkout-container {
+    max-width: 1200px;
+    margin: 100px auto 60px;
+    padding: 0 20px;
+}
+
+.checkout-page-title {
+    color: #ffffff;
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(1.1rem, 3vw, 1.75rem);
+    line-height: 1.5;
+    margin-bottom: 12px;
+    letter-spacing: 0.02em;
+}
+
+.checkout-page-subtitle {
+    color: #e9ecef;
+    font-size: 1rem;
+    margin-bottom: 0;
+}
+
+.checkout-grid {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 32px;
+    margin-top: 40px;
+}
+
+/* ---- White panels on black (max contrast) ---- */
+.checkout-section {
+    background: #ffffff;
+    color: #000000;
+    border: 3px solid #000000;
+    box-shadow: 6px 6px 0 #ffffff;
+    border-radius: 0;
+    padding: 28px;
+    margin-bottom: 24px;
+}
+
+.checkout-section h2 {
+    color: #000000;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.checkout-section h2 .step-number {
+    background: #000000;
+    color: #ffffff;
+    width: 32px;
+    height: 32px;
+    border-radius: 0;
+    border: 2px solid #000000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+/* ---- Forms ---- */
+.checkout-page .form-group {
+    margin-bottom: 20px;
+}
+
+.checkout-page .form-group label {
+    display: block;
+    color: #000000;
+    margin-bottom: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.checkout-page .form-group input,
+.checkout-page .form-group select,
+.checkout-page .form-group textarea {
+    width: 100%;
+    padding: 12px 14px;
+    background: #ffffff;
+    border: 3px solid #000000;
+    border-radius: 0;
+    color: #000000;
+    font-size: 1rem;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.checkout-page .form-group input::placeholder,
+.checkout-page .form-group textarea::placeholder {
+    /* #495057 on #fff ≈ 7.5:1 */
+    color: #495057;
+    opacity: 1;
+}
+
+.checkout-page .form-group select {
+    color: #000000;
+}
+
+.checkout-page .form-group select option {
+    color: #000000;
+    background: #ffffff;
+}
+
+.checkout-page .form-group input:focus,
+.checkout-page .form-group select:focus,
+.checkout-page .form-group textarea:focus {
+    outline: 3px solid #000000;
+    outline-offset: 2px;
+    background: #f8f9fa;
+    box-shadow: 3px 3px 0 #000000;
+}
+
+.checkout-page .form-group input:disabled,
+.checkout-page .form-group select:disabled,
+.checkout-page .form-group textarea:disabled {
+    background: #e9ecef;
+    color: #212529; /* ≥4.5:1 on #e9ecef */
+    border-color: #212529;
+    cursor: not-allowed;
+}
+
+.checkout-page .form-group input[aria-invalid="true"],
+.checkout-page .form-group select[aria-invalid="true"],
+.checkout-page .form-group textarea[aria-invalid="true"],
+.checkout-page .form-group input.error,
+.checkout-page .form-group.select.error {
+    border-color: #000000;
+    box-shadow: 0 0 0 3px #ffffff, 0 0 0 6px #000000;
+}
+
+.checkout-page .field-error {
+    color: #000000;
+    background: #ffffff;
+    border: 2px solid #000000;
+    border-left: 6px solid #000000;
+    padding: 8px 12px;
+    margin-top: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.checkout-page .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+/* ---- Payment methods ---- */
+.payment-methods {
+    display: grid;
+    gap: 12px;
+}
+
+.payment-method {
+    background: #ffffff;
+    border: 3px solid #000000;
+    border-radius: 0;
+    padding: 16px;
+    cursor: pointer;
+    transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.1s ease;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 3px 3px 0 #000000;
+}
+
+.payment-method:hover {
+    background: #f8f9fa;
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0 #000000;
+}
+
+.payment-method.selected {
+    background: #000000;
+    color: #ffffff;
+    /* Black hard shadow stays visible on white panels */
+    box-shadow: 5px 5px 0 #000000;
+    outline: 2px solid #000000;
+    outline-offset: 2px;
+}
+
+.payment-method.selected .payment-method-info strong,
+.payment-method.selected .payment-method-info small {
+    color: #ffffff;
+}
+
+.payment-method.selected .payment-method-info small {
+    color: #e9ecef;
+}
+
+.payment-method input[type="radio"] {
+    width: 20px;
+    height: 20px;
+    accent-color: #000000;
+    flex-shrink: 0;
+}
+
+.payment-method.selected input[type="radio"] {
+    accent-color: #ffffff;
+}
+
+.payment-method-info {
+    flex: 1;
+}
+
+.payment-method-info strong {
+    color: #000000;
+    display: block;
+    margin-bottom: 4px;
+    font-size: 1rem;
+}
+
+.payment-method-info small {
+    color: #212529;
+    font-size: 0.85rem;
+}
+
+.mpesa-logo {
+    width: 64px;
+    height: 40px;
+    background: #000000;
+    border: 2px solid #ffffff;
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.7rem;
+    font-family: 'Press Start 2P', monospace;
+    letter-spacing: -0.02em;
+    flex-shrink: 0;
+}
+
+.payment-method:not(.selected) .mpesa-logo {
+    border-color: #000000;
+    background: #ffffff;
+    color: #000000;
+}
+
+.payment-icon {
+    flex-shrink: 0;
+    color: #000000;
+}
+
+.payment-method.selected .payment-icon {
+    color: #ffffff;
+}
+
+/* ---- M-Pesa instructions ---- */
+.mpesa-instructions {
+    background: #000000;
+    color: #ffffff;
+    border: 3px solid #000000;
+    outline: 3px solid #ffffff;
+    outline-offset: -6px;
+    border-radius: 0;
+    padding: 24px;
+    margin-top: 20px;
+    display: none;
+}
+
+.mpesa-instructions.active {
+    display: block;
+}
+
+.mpesa-instructions h3 {
+    color: #ffffff;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.7rem;
+    line-height: 1.6;
+    margin-bottom: 16px;
+}
+
+.mpesa-till-banner {
+    background: #ffffff;
+    color: #000000;
+    border: 3px solid #ffffff;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    word-break: break-word;
+}
+
+.mpesa-till-banner .till-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #212529;
+}
+
+.mpesa-till-banner .till-value {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.65rem;
+    line-height: 1.6;
+    color: #000000;
+}
+
+.mpesa-instructions ol {
+    color: #ffffff;
+    margin: 0 0 0 4px;
+    padding-left: 24px;
+}
+
+.mpesa-instructions li {
+    margin-bottom: 10px;
+    line-height: 1.5;
+    color: #ffffff;
+}
+
+.mpesa-instructions li strong {
+    color: #ffffff;
+}
+
+.mpesa-note {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 2px solid #ffffff;
+    color: #e9ecef;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+/* ---- Order summary / cart items ---- */
+.order-summary {
+    position: sticky;
+    top: 100px;
+}
+
+.cart-item {
+    display: flex;
+    gap: 16px;
+    padding: 14px;
+    background: #f8f9fa;
+    border: 2px solid #000000;
+    border-radius: 0;
+    margin-bottom: 12px;
+}
+
+.cart-item-image {
+    width: 72px;
+    height: 72px;
+    background: #ffffff;
+    border: 2px solid #000000;
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #000000;
+    flex-shrink: 0;
+}
+
+.cart-item-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.cart-item-name {
+    color: #000000;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.cart-item-meta {
+    color: #212529;
+    font-size: 0.85rem;
+}
+
+.cart-item-price {
+    color: #000000;
+    font-weight: 700;
+    font-size: 1.05rem;
+    white-space: nowrap;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    color: #000000;
+    font-weight: 500;
+}
+
+.summary-row.total {
+    border-top: 3px solid #000000;
+    margin-top: 12px;
+    padding-top: 16px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #000000;
+}
+
+.summary-row.total .amount {
+    color: #000000;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.75rem;
+}
+
+/* ---- Terms of sale ---- */
+.terms-summary {
+    background: #f8f9fa;
+    border: 3px solid #000000;
+    padding: 16px;
+    margin-top: 20px;
+}
+
+.terms-summary h3 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.65rem;
+    line-height: 1.6;
+    color: #000000;
+    margin-bottom: 12px;
+}
+
+.terms-summary ul {
+    margin: 0 0 12px 0;
+    padding-left: 20px;
+    color: #000000;
+}
+
+.terms-summary li {
+    margin-bottom: 6px;
+    line-height: 1.45;
+    font-size: 0.9rem;
+}
+
+.terms-summary a {
+    color: #000000;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.terms-summary a:hover,
+.terms-summary a:focus {
+    background: #000000;
+    color: #ffffff;
+    outline: 2px solid #000000;
+}
+
+.terms-agree {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-top: 16px;
+    padding: 14px;
+    border: 3px solid #000000;
+    background: #ffffff;
+    cursor: pointer;
+}
+
+.terms-agree input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+    margin-top: 2px;
+    accent-color: #000000;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.terms-agree span {
+    color: #000000;
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.terms-agree:focus-within {
+    outline: 3px solid #000000;
+    outline-offset: 2px;
+}
+
+/* ---- Retro buttons (scoped) ---- */
+.checkout-page .btn-retro,
+.checkout-page .checkout-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 16px 20px;
+    margin-top: 20px;
+    background: #ffffff;
+    color: #000000;
+    border: 4px solid #000000;
+    border-radius: 0;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.7rem;
+    line-height: 1.5;
+    font-weight: 400;
+    text-decoration: none;
+    cursor: pointer;
+    box-shadow: 6px 6px 0 #000000;
+    transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.08s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.checkout-page .btn-retro:hover,
+.checkout-page .checkout-btn:hover {
+    background: #000000;
+    color: #ffffff;
+    border-color: #ffffff;
+    box-shadow: 6px 6px 0 #ffffff;
+    transform: translate(-2px, -2px);
+}
+
+.checkout-page .btn-retro:focus-visible,
+.checkout-page .checkout-btn:focus-visible {
+    outline: 3px solid #ffffff;
+    outline-offset: 4px;
+    background: #000000;
+    color: #ffffff;
+    border-color: #ffffff;
+}
+
+.checkout-page .btn-retro:active,
+.checkout-page .checkout-btn:active {
+    transform: translate(4px, 4px);
+    box-shadow: 2px 2px 0 #000000;
+}
+
+.checkout-page .btn-retro:disabled,
+.checkout-page .checkout-btn:disabled,
+.checkout-page .btn-retro[aria-disabled="true"],
+.checkout-page .checkout-btn[aria-disabled="true"] {
+    background: #e9ecef;
+    color: #212529; /* ≥4.5:1 on #e9ecef */
+    border-color: #212529;
+    box-shadow: 4px 4px 0 #212529;
+    cursor: not-allowed;
+    transform: none;
+    opacity: 1;
+}
+
+.checkout-page .btn-retro.btn-retro--primary,
+.checkout-page .checkout-btn {
+    /* Primary on white panels: black fill + black hard shadow (visible) */
+    background: #000000;
+    color: #ffffff;
+    border-color: #000000;
+    box-shadow: 6px 6px 0 #000000;
+}
+
+.checkout-page .btn-retro.btn-retro--primary:hover,
+.checkout-page .checkout-btn:hover:not(:disabled) {
+    background: #ffffff;
+    color: #000000;
+    border-color: #000000;
+    box-shadow: 8px 8px 0 #000000;
+    transform: translate(-2px, -2px);
+}
+
+.checkout-page .btn-retro.btn-retro--primary:focus-visible,
+.checkout-page .checkout-btn:focus-visible {
+    outline: 3px solid #000000;
+    outline-offset: 4px;
+    background: #ffffff;
+    color: #000000;
+    border-color: #000000;
+}
+
+.checkout-page .btn-retro.btn-retro--primary:active,
+.checkout-page .checkout-btn:active:not(:disabled) {
+    transform: translate(4px, 4px);
+    box-shadow: 2px 2px 0 #000000;
+}
+
+/* Inline / empty-cart CTA sits on black page background */
+.checkout-page .btn-retro.btn-retro--inline {
+    background: #ffffff;
+    color: #000000;
+    border-color: #ffffff;
+    box-shadow: 6px 6px 0 #ffffff;
+}
+
+.checkout-page .btn-retro.btn-retro--inline:hover {
+    background: #000000;
+    color: #ffffff;
+    border-color: #ffffff;
+    box-shadow: 6px 6px 0 #ffffff;
+}
+
+.checkout-page .btn-retro.btn-retro--inline:active {
+    transform: translate(4px, 4px);
+    box-shadow: 2px 2px 0 #ffffff;
+}
+
+.checkout-page .btn-retro.btn-retro--inline {
+    width: auto;
+    margin-top: 24px;
+    padding: 14px 24px;
+}
+
+/* Visual hint when terms not yet agreed — button stays clickable for alert */
+.checkout-page .checkout-btn.needs-terms {
+    opacity: 1;
+    background: #212529;
+    color: #ffffff;
+    border-color: #000000;
+    box-shadow: 6px 6px 0 #000000;
+}
+
+/* Empty cart sits on black page */
+.empty-cart {
+    text-align: center;
+    padding: 60px 20px;
+    color: #e9ecef;
+}
+
+.empty-cart svg {
+    margin-bottom: 20px;
+    color: #ffffff;
+}
+
+.empty-cart h2 {
+    color: #ffffff;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin-bottom: 16px;
+}
+
+.empty-cart p {
+    color: #e9ecef;
+}
+
+/* ---- Processing modal ---- */
+.processing-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.92);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.processing-modal.active {
+    display: flex;
+}
+
+.processing-content {
+    background: #ffffff;
+    color: #000000;
+    border: 4px solid #000000;
+    box-shadow: 8px 8px 0 #ffffff;
+    border-radius: 0;
+    padding: 40px;
+    text-align: center;
+    max-width: 400px;
+    width: 100%;
+}
+
+.processing-content h2 {
+    color: #000000;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.75rem;
+    line-height: 1.6;
+    margin-bottom: 12px;
+}
+
+.processing-content p {
+    color: #212529;
+}
+
+.spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid #e9ecef;
+    border-top-color: #000000;
+    border-radius: 0;
+    animation: checkout-spin 0.8s linear infinite;
+    margin: 0 auto 24px;
+}
+
+@keyframes checkout-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Header cart button on checkout — keep readable, don't restyle site-wide */
+.checkout-page .header {
+    background: #000000;
+    border-bottom: 3px solid #ffffff;
+}
+
+.checkout-page .cart-btn {
+    background: #ffffff;
+    color: #000000;
+    border: 3px solid #ffffff;
+    border-radius: 0;
+    box-shadow: 3px 3px 0 #ffffff;
+}
+
+.checkout-page .cart-btn:hover {
+    background: #000000;
+    color: #ffffff;
+}
+
+.checkout-page .cart-count {
+    background: #000000;
+    color: #ffffff;
+    border: 2px solid #ffffff;
+    border-radius: 0;
+}
+
+@media (max-width: 968px) {
+    .checkout-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .order-summary {
+        position: static;
+    }
+
+    .checkout-page .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .checkout-section {
+        box-shadow: 4px 4px 0 #ffffff;
+        padding: 20px;
+    }
+
+    .checkout-page .btn-retro,
+    .checkout-page .checkout-btn {
+        font-size: 0.6rem;
+        padding: 14px 12px;
+    }
+}
+
+@media (max-width: 390px) {
+    .checkout-container {
+        padding: 0 12px;
+        margin-top: 88px;
+    }
+
+    .mpesa-till-banner .till-value {
+        font-size: 0.55rem;
+    }
+}
