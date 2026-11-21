@@ -3,7 +3,7 @@
   "short_name": "Knight Watts",
   "description": "Quality car spare parts with 3D visualization and on-demand printing. A subsidiary of Knight Watts Energy Solutions Limited.",
   "start_url": "./",
-  "display": "standalone",
+  "display": "minimal-ui",
   "background_color": "#0b0f17",
   "theme_color": "#00A86B",
   "orientation": "portrait-primary",

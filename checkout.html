@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Checkout | Knight Watts Auto Parts</title>
     <meta name="description" content="Complete your order - Knight Watts Auto Parts checkout with M-Pesa payment">
     <link rel="stylesheet" href="styles.css">
@@ -502,5 +502,7 @@
             localStorage.setItem('orders', JSON.stringify(orders));
         }
     </script>
+    <!-- Minimal add for iOS PWA back nav; see PR note re: conflict with checkout redesign #21 -->
+    <script src="js/pwa-nav.js"></script>
 </body>
 </html>

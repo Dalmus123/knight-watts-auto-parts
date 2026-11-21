@@ -622,9 +622,14 @@ function init3DTiltEffect(productId) {
         wrapper.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
     });
     
-    // Add touch support for mobile
+    // Light tilt on touch — never preventDefault (keeps iOS scroll + edge swipe-back)
     productCard.addEventListener('touchmove', (e) => {
         const touch = e.touches[0];
+        if (!touch) return;
+        // Ignore left-edge gestures used by iOS for back navigation
+        if (typeof window.kwIsLeftEdgeGesture === 'function' && window.kwIsLeftEdgeGesture(touch.clientX)) {
+            return;
+        }
         const rect = productCard.getBoundingClientRect();
         const x = touch.clientX - rect.left;
         const y = touch.clientY - rect.top;
@@ -644,11 +649,11 @@ function init3DTiltEffect(productId) {
             rotateY(${rotateY}deg) 
             scale3d(1.03, 1.03, 1.03)
         `;
-    });
+    }, { passive: true });
     
     productCard.addEventListener('touchend', () => {
         wrapper.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
-    });
+    }, { passive: true });
 }
 
 // 3D Preview Rendering
@@ -990,40 +995,52 @@ function showFallbackViewer() {
         isDragging = false;
     });
     
-    // Touch controls
+    // Touch controls — listeners only on the canvas; skip left ~20px for iOS swipe-back
     canvas.addEventListener('touchstart', (e) => {
+        if (!e.touches[0]) return;
+        if (typeof window.kwIsLeftEdgeGesture === 'function' && window.kwIsLeftEdgeGesture(e.touches[0].clientX)) {
+            isDragging = false;
+            return;
+        }
         isDragging = true;
-        previousMousePosition = { 
-            x: e.touches[0].clientX, 
-            y: e.touches[0].clientY 
+        previousMousePosition = {
+            x: e.touches[0].clientX,
+            y: e.touches[0].clientY
         };
-    });
+    }, { passive: true });
     
     canvas.addEventListener('touchmove', (e) => {
-        if (isDragging) {
-            const deltaX = e.touches[0].clientX - previousMousePosition.x;
-            const deltaY = e.touches[0].clientY - previousMousePosition.y;
-            
-            currentMesh.rotation.y += deltaX * 0.01;
-            currentMesh.rotation.x += deltaY * 0.01;
-            
-            previousMousePosition = { 
-                x: e.touches[0].clientX, 
-                y: e.touches[0].clientY 
-            };
+        if (!isDragging || !currentMesh || !e.touches[0]) return;
+        if (typeof window.kwIsLeftEdgeGesture === 'function' && window.kwIsLeftEdgeGesture(e.touches[0].clientX)) {
+            isDragging = false;
+            return;
         }
-    });
+        // Only prevent scrolling while actively rotating inside the canvas (not at screen edge)
+        if (e.cancelable) {
+            e.preventDefault();
+        }
+        const deltaX = e.touches[0].clientX - previousMousePosition.x;
+        const deltaY = e.touches[0].clientY - previousMousePosition.y;
+        
+        currentMesh.rotation.y += deltaX * 0.01;
+        currentMesh.rotation.x += deltaY * 0.01;
+        
+        previousMousePosition = {
+            x: e.touches[0].clientX,
+            y: e.touches[0].clientY
+        };
+    }, { passive: false });
     
     canvas.addEventListener('touchend', () => {
         isDragging = false;
-    });
+    }, { passive: true });
     
-    // Zoom with mouse wheel
+    // Zoom with mouse wheel (desktop only; do not attach non-passive touch blockers to document)
     canvas.addEventListener('wheel', (e) => {
         e.preventDefault();
         camera.position.z += e.deltaY * 0.01;
         camera.position.z = Math.max(2, Math.min(8, camera.position.z));
-    });
+    }, { passive: false });
     
     // Animation loop
     function animate() {
@@ -1158,41 +1175,69 @@ function contactAboutProduct() {
     document.getElementById('contact').scrollIntoView({ behavior: 'smooth' });
 }
 
-// Navigation
+// Navigation — same-page hash links only; real page links keep default history behavior
 function initNavigation() {
     const navLinks = document.querySelectorAll('.nav-link');
     
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
+            const target = link.getAttribute('href') || '';
+
+            // Cross-page links (e.g. 3d-printing.html, index.html#products from other pages):
+            // never preventDefault — Safari swipe-back needs a real history entry.
+            if (!target.startsWith('#')) {
+                return;
+            }
+
+            const el = document.querySelector(target);
+            if (!el) {
+                return;
+            }
+
             e.preventDefault();
             navLinks.forEach(l => l.classList.remove('active'));
             link.classList.add('active');
-            
-            const target = link.getAttribute('href');
-            document.querySelector(target).scrollIntoView({ behavior: 'smooth' });
+
+            // Push a real history entry so iOS swipe-back can return to prior section
+            if (history.pushState) {
+                history.pushState(null, '', target);
+            } else {
+                location.hash = target;
+            }
+            el.scrollIntoView({ behavior: 'smooth' });
         });
     });
+
+    window.addEventListener('popstate', () => {
+        const hash = location.hash;
+        if (hash) {
+            const el = document.querySelector(hash);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+    });
     
-    // Update active nav on scroll
+    // Update active nav on scroll (hash links on this page only)
     window.addEventListener('scroll', () => {
         const sections = document.querySelectorAll('section[id]');
         let current = '';
         
         sections.forEach(section => {
             const sectionTop = section.offsetTop;
-            const sectionHeight = section.clientHeight;
             if (window.pageYOffset >= sectionTop - 100) {
                 current = section.getAttribute('id');
             }
         });
         
         navLinks.forEach(link => {
-            link.classList.remove('active');
-            if (link.getAttribute('href') === `#${current}`) {
-                link.classList.add('active');
+            const href = link.getAttribute('href') || '';
+            if (!href.startsWith('#')) {
+                return;
             }
+            link.classList.toggle('active', href === `#${current}`);
         });
-    });
+    }, { passive: true });
 }
 
 // Handle window resize for 3D canvas
