@@ -12,13 +12,15 @@
     
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="./manifest.json">
-    <meta name="theme-color" content="#00A86B">
+    <!-- Match sticky header / html canvas — green theme-color caused a light status-bar band -->
+    <meta name="theme-color" content="#212529" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#212529">
     <!-- Prefer browser/minimal-ui chrome so iOS keeps swipe-back; in-app Back still provided -->
     <meta name="mobile-web-app-capable" content="yes">
     
     <!-- iOS: do NOT force standalone (that removes Safari swipe-back / home gestures chrome) -->
     <meta name="apple-mobile-web-app-capable" content="no">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="Knight Watts">
     <link rel="apple-touch-icon" href="./apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="192x192" href="./icon-192x192.png">

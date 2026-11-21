@@ -4,8 +4,8 @@
   "description": "Knight Watts Auto Parts admin dashboard with JARVIS AI interface for inventory, orders, and 3D print management.",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#0b0f17",
-  "theme_color": "#00A86B",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
   "orientation": "portrait-primary",
   "icons": [
     {

@@ -27,14 +27,26 @@ html {
     overscroll-behavior-y: auto;
     overscroll-behavior-x: auto;
     -webkit-text-size-adjust: 100%;
+    /*
+     * Critical for iOS status-bar / viewport-fit=cover:
+     * the canvas behind the status bar uses the html background.
+     * Transparent html → UA default whitish band under the clock/battery.
+     */
+    background-color: #212529;
+    background-color: var(--bg-dark);
+    color-scheme: dark;
 }
 
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background-color: #212529;
+    background-color: var(--bg-dark);
     background: var(--dark-bg);
     color: var(--text-primary);
     line-height: 1.6;
     overflow-x: hidden;
+    min-height: 100%;
+    min-height: 100dvh;
     /* Keep vertical scroll / pinch; do not use touch-action: none on the page */
     touch-action: pan-x pan-y;
     /* Horizontal + home-indicator insets; top inset applied on .header / floating back */
@@ -49,10 +61,13 @@ body {
     padding: 0 20px;
 }
 
-/* Header */
+/* Header — opaque fill so safe-area-inset-top is painted dark (not translucent grey) */
 .header {
-    background: rgba(33, 37, 41, 0.95);
-    backdrop-filter: blur(10px);
+    background-color: #212529;
+    background-color: var(--bg-dark);
+    background: #212529;
+    /* Keep a subtle blur only as decoration; colour underneath stays opaque */
+    backdrop-filter: none;
     position: sticky;
     top: 0;
     z-index: 1000;
@@ -1119,9 +1134,11 @@ body {
     }
 }
 
-/* Smooth Scrolling */
+/* Smooth Scrolling (merge with html block above — keep dark canvas) */
 html {
     scroll-behavior: smooth;
+    background-color: #212529;
+    background-color: var(--bg-dark);
 }
 
 /* Custom Scrollbar */
