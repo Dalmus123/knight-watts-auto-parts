@@ -13,11 +13,12 @@
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#00A86B">
+    <!-- Prefer browser/minimal-ui chrome so iOS keeps swipe-back; in-app Back still provided -->
     <meta name="mobile-web-app-capable" content="yes">
     
-    <!-- iOS PWA Meta Tags -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <!-- iOS: do NOT force standalone (that removes Safari swipe-back / home gestures chrome) -->
+    <meta name="apple-mobile-web-app-capable" content="no">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Knight Watts">
     <link rel="apple-touch-icon" href="./apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="192x192" href="./icon-192x192.png">
@@ -65,14 +66,14 @@
                             <span id="accountName">Account</span>
                         </button>
                     </div>
-                    <button class="cart-btn" onclick="window.location.href='checkout.html'" title="View Cart & Checkout">
+                    <a class="cart-btn" href="checkout.html" title="View Cart & Checkout">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="9" cy="21" r="1"></circle>
                             <circle cx="20" cy="21" r="1"></circle>
                             <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
                         </svg>
                         <span class="cart-count">0</span>
-                    </button>
+                    </a>
                 </div>
             </div>
         </div>
@@ -363,6 +364,7 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
     <!-- Google Model Viewer for 3D GLB/GLTF display and AR support -->
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
+    <script src="js/pwa-nav.js"></script>
     <script src="app.js"></script>
     <script src="grokbot.js"></script>
     <script src="ai-chat-widget.js"></script>
