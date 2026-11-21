@@ -7,11 +7,24 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
 
-/* ---- Page shell ---- */
+/* ---- Page shell (html painted black for iOS status-bar / safe-area) ---- */
+html {
+    background-color: #000000;
+    color-scheme: dark;
+}
+
 body.checkout-page {
     background: #000000;
+    background-color: #000000;
     color: #ffffff;
     font-family: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+/* Match sticky header + safe-area-inset-top to black B&W chrome */
+.checkout-page .header {
+    background: #000000;
+    background-color: #000000;
+    border-bottom-color: #ffffff;
 }
 
 .checkout-container {

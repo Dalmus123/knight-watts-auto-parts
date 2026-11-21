@@ -41,10 +41,27 @@
 }
 
 /* ===== GLOBAL OVERRIDES ===== */
+html {
+    background-color: var(--jarvis-bg-primary);
+    color-scheme: dark;
+}
+
+body {
+    background-color: var(--jarvis-bg-primary);
+}
+
 body #adminPanel,
 body .admin-panel {
     background: var(--jarvis-bg-primary);
     color: var(--jarvis-text-primary);
+}
+
+body .admin-header {
+    background-color: var(--jarvis-bg-primary);
+}
+
+body .admin-sidebar {
+    background-color: var(--jarvis-bg-secondary);
 }
 
 /* ===== LOGIN SCREEN ===== */

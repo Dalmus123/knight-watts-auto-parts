@@ -10,6 +10,16 @@
     --printing-text-secondary: #94a3b8;
 }
 
+/* Paint status-bar / safe-area region with the hero top colour */
+html {
+    background-color: var(--printing-bg-darker);
+    color-scheme: dark;
+}
+
+body {
+    background-color: var(--printing-bg-darker);
+}
+
 /* Hero Section - Full-width cinematic */
 .printing-hero {
     background: linear-gradient(180deg, var(--printing-bg-darker) 0%, var(--printing-bg-dark) 100%);
