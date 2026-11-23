@@ -9,6 +9,88 @@ let currentUserProfile = null;
 let currentRoute = 'dashboard';
 let allProducts = []; // Store all products for filtering
 
+/**
+ * Activate only on a deliberate tap/click — not when the user scrolls.
+ * Tracks touch start position; cancels if the finger moves > ~10px or the page scrolls.
+ * Does not activate on touchstart/pointerdown. Desktop mouse clicks still work via click.
+ */
+const DELIBERATE_TAP_MOVE_PX = 10;
+
+function attachDeliberateActivate(el, callback) {
+    let startX = 0;
+    let startY = 0;
+    let startScrollY = 0;
+    let tracking = false;
+    let movedOrScrolled = false;
+    let touchActivated = false;
+
+    const getScrollY = () =>
+        window.scrollY ||
+        document.documentElement.scrollTop ||
+        document.body.scrollTop ||
+        0;
+
+    el.addEventListener('touchstart', (e) => {
+        const t = e.touches[0];
+        if (!t) return;
+        tracking = true;
+        movedOrScrolled = false;
+        startX = t.clientX;
+        startY = t.clientY;
+        startScrollY = getScrollY();
+    }, { passive: true });
+
+    el.addEventListener('touchmove', (e) => {
+        if (!tracking) return;
+        const t = e.touches[0];
+        if (!t) return;
+        if (
+            Math.abs(t.clientX - startX) > DELIBERATE_TAP_MOVE_PX ||
+            Math.abs(t.clientY - startY) > DELIBERATE_TAP_MOVE_PX
+        ) {
+            movedOrScrolled = true;
+        }
+    }, { passive: true });
+
+    el.addEventListener('touchend', (e) => {
+        if (!tracking) return;
+        tracking = false;
+
+        const t = e.changedTouches[0];
+        if (t) {
+            if (
+                Math.abs(t.clientX - startX) > DELIBERATE_TAP_MOVE_PX ||
+                Math.abs(t.clientY - startY) > DELIBERATE_TAP_MOVE_PX
+            ) {
+                movedOrScrolled = true;
+            }
+        }
+        // Ignore tiny rubber-band / subpixel scroll jitter; treat real list scroll as cancel
+        if (Math.abs(getScrollY() - startScrollY) > DELIBERATE_TAP_MOVE_PX) {
+            movedOrScrolled = true;
+        }
+
+        if (movedOrScrolled) return;
+
+        // Prevent the synthetic click that would otherwise double-fire
+        e.preventDefault();
+        e.stopPropagation();
+        touchActivated = true;
+        callback(e);
+        setTimeout(() => { touchActivated = false; }, 500);
+    }, { passive: false });
+
+    el.addEventListener('touchcancel', () => {
+        tracking = false;
+        movedOrScrolled = true;
+    }, { passive: true });
+
+    el.addEventListener('click', (e) => {
+        if (touchActivated) return;
+        callback(e);
+    });
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
     // Hide both screens initially while checking auth
@@ -679,24 +761,10 @@ async function loadProducts() {
     // Attach event listener for Add Product button (after products are loaded)
     const addBtn = document.getElementById('addProductBtn');
     if (addBtn) {
-        let touchHandled = false;
-        
-        // Handle touch devices
-        addBtn.addEventListener('touchend', (e) => {
+        attachDeliberateActivate(addBtn, (e) => {
             e.preventDefault();
             e.stopPropagation();
-            touchHandled = true;
-            console.log('[Admin] Add Product button tapped (touch)');
-            openAddProductModal();
-            setTimeout(() => { touchHandled = false; }, 500);
-        }, { passive: false });
-        
-        // Handle mouse/pointer devices (won't fire if touch was handled)
-        addBtn.addEventListener('click', (e) => {
-            if (touchHandled) return;
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('[Admin] Add Product button clicked (mouse)');
+            console.log('[Admin] Add Product button activated');
             openAddProductModal();
         });
     }
@@ -795,23 +863,11 @@ function renderProductsTable(products) {
         `;
         container.innerHTML = html;
         
-        // Attach click handlers to cards with touch support
+        // Deliberate tap/click only — ignore scroll gestures (iOS Safari / PWA)
         document.querySelectorAll('.product-card').forEach(card => {
-            let touchHandled = false;
-            
-            card.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                touchHandled = true;
+            attachDeliberateActivate(card, () => {
                 const productId = card.dataset.productId;
-                console.log('[Admin] Product card tapped (touch):', productId);
-                editProduct(productId);
-                setTimeout(() => { touchHandled = false; }, 500);
-            }, { passive: false });
-            
-            card.addEventListener('click', (e) => {
-                if (touchHandled) return;
-                const productId = card.dataset.productId;
-                console.log('[Admin] Product card clicked (mouse):', productId);
+                console.log('[Admin] Product card activated:', productId);
                 editProduct(productId);
             });
         });
