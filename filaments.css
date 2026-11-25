@@ -2,9 +2,10 @@
 
 .filaments-hero {
     padding: 72px 0 48px;
-    background: linear-gradient(165deg, var(--grey-300) 0%, var(--grey-200) 45%, var(--grey-100) 100%);
-    border-bottom: 1px solid var(--border-mid);
-    color: var(--text-dark);
+    background: linear-gradient(165deg, #CED4DA 0%, #DEE2E6 45%, #E9ECEF 100%);
+    background: linear-gradient(165deg, var(--grey-300, #CED4DA) 0%, var(--grey-200, #DEE2E6) 45%, var(--grey-100, #E9ECEF) 100%);
+    border-bottom: 1px solid var(--border-mid, #6C757D);
+    color: var(--text-dark, #212529);
 }
 
 .filaments-hero .hero-eyebrow {
@@ -13,7 +14,7 @@
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--grey-600);
+    color: var(--grey-600, #495057);
     margin-bottom: 12px;
 }
 
@@ -22,18 +23,18 @@
     font-weight: 800;
     line-height: 1.15;
     margin-bottom: 12px;
-    color: var(--grey-900);
+    color: var(--grey-900, #0A0C0E);
 }
 
 .filaments-hero h1 .highlight {
-    color: var(--grey-700);
-    border-bottom: 3px solid var(--grey-800);
+    color: var(--grey-700, #343A40);
+    border-bottom: 3px solid var(--grey-800, #212529);
 }
 
 .filaments-hero .hero-subtitle {
     max-width: 560px;
     font-size: 1.05rem;
-    color: var(--grey-600);
+    color: var(--grey-600, #495057);
     margin-bottom: 0;
 }
 
