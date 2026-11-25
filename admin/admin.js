@@ -8,6 +8,7 @@ let currentUser = null;
 let currentUserProfile = null;
 let currentRoute = 'dashboard';
 let allProducts = []; // Store all products for filtering
+let hasLandedOnRoleHome = false;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
@@ -46,10 +47,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             // No session - show login screen
             loginScreen.style.display = 'flex';
+            setupPasskeyLogin();
         }
     } catch (error) {
         console.error('Auth initialization error:', error);
         loginScreen.style.display = 'flex';
+        setupPasskeyLogin();
     }
     
     // Set up auth listeners
@@ -67,6 +70,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Set up service worker update handling
     setupServiceWorkerUpdate();
 });
+
+function setupPasskeyLogin() {
+    if (typeof wirePasskeyLoginUI !== 'function' || !supabaseClient) return;
+    wirePasskeyLoginUI({
+        supabase: supabaseClient,
+        passkeyButtonId: 'loginPasskeyBtn',
+        errorDivId: 'loginError',
+        onSignedIn: async (data) => {
+            if (data?.user) await loadUserProfile(data.user);
+        }
+    });
+}
 
 // Service Worker Update Handling
 function setupServiceWorkerUpdate() {
@@ -134,7 +149,9 @@ function setupAuthListeners() {
         if (event === 'SIGNED_IN') {
             await loadUserProfile(session.user);
         } else if (event === 'SIGNED_OUT') {
+            hasLandedOnRoleHome = false;
             showLoginScreen();
+            setupPasskeyLogin();
         }
     });
 }
@@ -204,8 +221,10 @@ async function loadUserProfile(user) {
             throw error;
         }
         
-        // Validate staff access — includes sales team CRM roles
-        const allowedRoles = ['owner', 'admin', 'hq_readonly', 'print_operator', 'chief_of_sales', 'sales_rep'];
+        // Validate staff access — C-suite + sales CRM + legacy staff
+        const allowedRoles = (typeof STAFF_ROLES !== 'undefined')
+            ? STAFF_ROLES
+            : ['owner', 'admin', 'ceo', 'cfo', 'coo', 'cos', 'hq_readonly', 'print_operator', 'chief_of_sales', 'sales_rep'];
         if (!allowedRoles.includes(profile.role)) {
             await denyStaffAccess('Access denied. This admin panel is for staff only. You have been signed out.');
             return;
@@ -235,20 +254,34 @@ function showAdminPanel() {
     // Update user info
     document.getElementById('userName').textContent = currentUserProfile.full_name || 'User';
     document.getElementById('userEmail').textContent = currentUserProfile.email;
-    document.getElementById('userRole').textContent = currentUserProfile.role.toUpperCase();
+    const roleLabel = typeof formatRoleLabel === 'function'
+        ? formatRoleLabel(currentUserProfile.role)
+        : currentUserProfile.role.toUpperCase();
+    document.getElementById('userRole').textContent = roleLabel;
     
-    // Show/hide owner-only features
-    const ownerOnly = document.querySelectorAll('.owner-only');
-    ownerOnly.forEach(el => {
-        el.style.display = currentUserProfile.role === 'owner' ? 'flex' : 'none';
-    });
-
-    // Sales CRM nav visibility (defined in sales.js)
-    if (typeof updateSalesNavVisibility === 'function') {
-        updateSalesNavVisibility();
+    // Role-based sidebar (RLS still enforces data jurisdiction)
+    if (typeof updateRoleNavVisibility === 'function') {
+        updateRoleNavVisibility();
+    } else {
+        const ownerOnly = document.querySelectorAll('.owner-only');
+        ownerOnly.forEach(el => {
+            el.style.display = ['owner', 'ceo'].includes(currentUserProfile.role) ? 'flex' : 'none';
+        });
+        if (typeof updateSalesNavVisibility === 'function') {
+            updateSalesNavVisibility();
+        }
     }
-    
-    // Don't call loadPage directly - routing will handle it
+
+    // Land each role on its home desk once per session
+    if (!hasLandedOnRoleHome && typeof getRoleHome === 'function') {
+        hasLandedOnRoleHome = true;
+        const home = getRoleHome(currentUserProfile.role);
+        const hashRoute = window.location.hash.slice(2);
+        if (!hashRoute || hashRoute === 'dashboard') {
+            navigateToRoute(home, true);
+            return;
+        }
+    }
 }
 
 // Mobile Menu Setup
@@ -400,6 +433,7 @@ async function loadPage(page) {
         analytics: 'Analytics & Evaluations',
         reports: 'Reports',
         users: 'User Management',
+        security: 'Security',
         'my-sales': 'My Sales',
         'sales-team': 'Sales Team',
         'sales-tasks': 'Sales Tasks',
@@ -412,6 +446,10 @@ async function loadPage(page) {
     if (typeof unsubscribeSalesRealtime === 'function' &&
         !['my-sales', 'sales-team', 'sales-tasks'].includes(page)) {
         unsubscribeSalesRealtime();
+    }
+
+    if (typeof guardPageAccess === 'function' && !guardPageAccess(page)) {
+        return;
     }
     
     // Load page content
@@ -444,8 +482,13 @@ async function loadPage(page) {
             await loadReports();
             break;
         case 'users':
-            if (currentUserProfile.role === 'owner') {
+            if (['owner', 'ceo'].includes(currentUserProfile.role)) {
                 await loadUsers();
+            }
+            break;
+        case 'security':
+            if (typeof loadSecurityPasskeysPage === 'function') {
+                await loadSecurityPasskeysPage();
             }
             break;
         case 'my-sales':
@@ -466,8 +509,13 @@ async function loadPage(page) {
     }
 }
 
-// Dashboard
+// Dashboard — role-tailored home screens (RLS still scopes the data)
 async function loadDashboard() {
+    if (typeof loadRoleDashboard === 'function') {
+        await loadRoleDashboard();
+        return;
+    }
+
     const content = document.getElementById('contentArea');
     
     content.innerHTML = `
@@ -522,7 +570,7 @@ async function loadDashboard() {
         <div class="table-container">
             <div class="table-header">
                 <h3>Recent Orders</h3>
-                <button class="action-btn action-btn-primary" onclick="loadPage('orders')">View All</button>
+                <button class="action-btn action-btn-primary" onclick="navigateToRoute('orders')">View All</button>
             </div>
             <div id="recentOrdersTable"></div>
         </div>
@@ -530,13 +578,12 @@ async function loadDashboard() {
         <div class="table-container">
             <div class="table-header">
                 <h3>Recent Custom Requests</h3>
-                <button class="action-btn action-btn-primary" onclick="loadPage('requests')">View All</button>
+                <button class="action-btn action-btn-primary" onclick="navigateToRoute('requests')">View All</button>
             </div>
             <div id="recentRequestsTable"></div>
         </div>
     `;
     
-    // Load dashboard data
     await loadDashboardStats();
 }
 
@@ -673,10 +720,12 @@ function renderRecentRequests(requests) {
 async function loadProducts() {
     const content = document.getElementById('contentArea');
     
-    if (!['owner', 'admin'].includes(currentUserProfile.role)) {
+    const canViewProducts = ['owner', 'admin', 'ceo', 'cfo', 'coo', 'sales_rep', 'chief_of_sales'].includes(currentUserProfile.role);
+    if (!canViewProducts) {
         content.innerHTML = '<div class="empty-state"><h3>Access Denied</h3><p>You do not have permission to view this page.</p></div>';
         return;
     }
+    const canManageProducts = ['owner', 'admin', 'ceo', 'coo'].includes(currentUserProfile.role);
     
     content.innerHTML = `
             <div class="search-filter-bar">
@@ -692,7 +741,7 @@ async function loadProducts() {
                 <option value="auto_part">Auto Parts</option>
                 <option value="filament">Filaments</option>
             </select>
-            <button class="btn btn-primary" id="addProductBtn">Add Product</button>
+            ${canManageProducts ? '<button class="btn btn-primary" id="addProductBtn">Add Product</button>' : ''}
         </div>
         
         <div class="table-container">
@@ -929,7 +978,7 @@ function getProductImageUrl(imagePath) {
 async function loadOrders() {
     const content = document.getElementById('contentArea');
     
-    if (!['owner', 'admin'].includes(currentUserProfile.role)) {
+    if (!['owner', 'admin', 'ceo', 'cfo', 'coo', 'cos', 'chief_of_sales', 'sales_rep'].includes(currentUserProfile.role)) {
         content.innerHTML = '<div class="empty-state"><h3>Access Denied</h3></div>';
         return;
     }
@@ -1029,7 +1078,7 @@ function renderOrdersTable(orders) {
 async function loadRequests() {
     const content = document.getElementById('contentArea');
     
-    if (!['owner', 'admin'].includes(currentUserProfile.role)) {
+    if (!['owner', 'admin', 'ceo', 'coo'].includes(currentUserProfile.role)) {
         content.innerHTML = '<div class="empty-state"><h3>Access Denied</h3></div>';
         return;
     }
@@ -1131,7 +1180,7 @@ function renderRequestsTable(requests) {
 async function loadPrintQueue() {
     const content = document.getElementById('contentArea');
     
-    if (!['owner', 'admin', 'print_operator'].includes(currentUserProfile.role)) {
+    if (!['owner', 'admin', 'ceo', 'coo', 'print_operator'].includes(currentUserProfile.role)) {
         content.innerHTML = '<div class="empty-state"><h3>Access Denied</h3></div>';
         return;
     }
@@ -1225,7 +1274,7 @@ function renderPrintJobs(jobs) {
             </div>
             
             <div class="print-job-actions">
-                ${job.status === 'pending_approval' && ['owner', 'admin'].includes(currentUserProfile.role) ? `
+                ${job.status === 'pending_approval' && ['owner', 'admin', 'ceo', 'coo'].includes(currentUserProfile.role) ? `
                     <button class="action-btn action-btn-primary" onclick="approvePrintJob('${job.id}')">Approve</button>
                 ` : ''}
                 ${job.status === 'queued' && !job.bed_clear_confirmed ? `
@@ -2641,24 +2690,42 @@ function openSignInUserModal() {
                     <h2 id="signInUserTitle">Sign In User</h2>
                     <button type="button" onclick="closeSignInUserModal()" class="modal-close" aria-label="Close">&times;</button>
                 </div>
-                <form id="signInUserForm" onsubmit="submitSignInUser(event)">
+                <form id="signInUserForm" method="post" action="#" autocomplete="on" onsubmit="submitSignInUser(event)">
                     <div class="modal-body">
                         <p style="color: var(--text-muted); font-size: 14px; margin: 0 0 16px;">
                             Sign in with a company account already created in Supabase Auth.
-                            This replaces the current session.
+                            This replaces the current session. Password or passkey (Face ID / Touch ID).
                         </p>
                         <div class="form-group">
                             <label for="signInUserEmail">Company Email *</label>
-                            <input type="email" id="signInUserEmail" autocomplete="username" required placeholder="user@knightwatts.com">
+                            <input
+                                type="email"
+                                id="signInUserEmail"
+                                name="username"
+                                inputmode="email"
+                                autocapitalize="none"
+                                autocorrect="off"
+                                spellcheck="false"
+                                autocomplete="username webauthn"
+                                required
+                                placeholder="user@knightwatts.com"
+                            >
                         </div>
                         <div class="form-group">
-                            <label for="signInUserPassword">Password *</label>
-                            <input type="password" id="signInUserPassword" autocomplete="current-password" required placeholder="••••••••">
+                            <label for="signInUserPassword">Password</label>
+                            <input
+                                type="password"
+                                id="signInUserPassword"
+                                name="password"
+                                autocomplete="current-password"
+                                placeholder="••••••••"
+                            >
                         </div>
                         <div id="signInUserError" class="error-message" style="display: none;"></div>
                     </div>
-                    <div class="modal-footer">
+                    <div class="modal-footer" style="flex-wrap: wrap; gap: 8px;">
                         <button type="button" class="btn btn-secondary" onclick="closeSignInUserModal()">Cancel</button>
+                        <button type="button" class="btn btn-outline" id="signInUserPasskeyBtn">Sign in with passkey</button>
                         <button type="submit" class="btn btn-primary" id="signInUserSubmitBtn">Sign In</button>
                     </div>
                 </form>
@@ -2670,6 +2737,23 @@ function openSignInUserModal() {
     
     const emailInput = document.getElementById('signInUserEmail');
     if (emailInput) emailInput.focus();
+
+    if (typeof wirePasskeyLoginUI === 'function' && supabaseClient) {
+        wirePasskeyLoginUI({
+            supabase: supabaseClient,
+            passkeyButtonId: 'signInUserPasskeyBtn',
+            errorDivId: 'signInUserError',
+            onSignedIn: async (data) => {
+                closeSignInUserModal();
+                if (typeof showSuccess === 'function') {
+                    showSuccess(`Signed in with passkey as ${data?.user?.email || 'user'}.`);
+                }
+                if (data?.user && !currentUser) {
+                    await loadUserProfile(data.user);
+                }
+            }
+        });
+    }
 }
 
 function closeSignInUserModal() {
@@ -2698,7 +2782,7 @@ async function submitSignInUser(event) {
     
     if (!email || !password) {
         if (errorDiv) {
-            errorDiv.textContent = 'Email and password are required.';
+            errorDiv.textContent = 'Email and password are required for password sign-in. Or use Sign in with passkey.';
             errorDiv.style.display = 'block';
         }
         return;
@@ -2747,6 +2831,7 @@ function editUser(id) {
 
 // Make functions globally available
 window.loadPage = loadPage;
+window.navigateToRoute = navigateToRoute;
 window.openAddProductModal = openAddProductModal;
 window.editProduct = editProduct;
 window.viewOrder = viewOrder;

@@ -17,9 +17,14 @@ Enums are committed in a separate migration because Postgres requires new `user_
 
 | Role | Access |
 |------|--------|
-| `owner` / `admin` | Everything + manage reps, roles, commission rules |
+| `owner` / `admin` / `ceo` | Everything + manage reps, roles, commission rules |
+| `cfo` | Finance desk: revenue, commissions payable, stock valuation, reports |
+| `coo` | Operations: orders, fulfilment, catalogue/3D, stock, tasks |
+| `cos` | Chief of Staff: sales team + heads of sales, telemetry, commissions |
 | `chief_of_sales` | All reps’ performance, approve/pay commissions, assign tasks & orders |
 | `sales_rep` | Own dashboard, own commissions, update own task status |
+
+See **PASSKEYS_AND_ROLES.md** for the full C-suite matrix, passkey setup, and migrations `20261125190000` / `20261125190001` (apply on merge — not applied live in that PR).
 
 ## Setup a salesperson
 
@@ -48,4 +53,4 @@ Referral links: `https://yoursite/?ref=CODE01` (also works on checkout).
 
 ## Service worker
 
-Cache bumped to `knight-watts-v1.3.1-sales-filaments` so PWAs pick up sales assets, referral helper, and Filaments pages together.
+Cache bumped to `knight-watts-v1.4.0-passkeys-role-dashboards` so PWAs pick up sales assets, role desks, and passkey login.

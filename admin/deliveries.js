@@ -7,7 +7,7 @@ let deliverySubscription = null;
 async function loadDeliveriesPage() {
     const content = document.getElementById('contentArea');
     
-    if (!['owner', 'admin'].includes(currentUserProfile.role)) {
+    if (!['owner', 'admin', 'ceo', 'coo', 'hq_readonly'].includes(currentUserProfile.role)) {
         content.innerHTML = '<div class="empty-state"><h3>Access Denied</h3></div>';
         return;
     }
