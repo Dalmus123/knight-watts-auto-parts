@@ -204,8 +204,8 @@ async function loadUserProfile(user) {
             throw error;
         }
         
-        // Validate staff access - only allow owner, admin, hq_readonly, and print_operator
-        const allowedRoles = ['owner', 'admin', 'hq_readonly', 'print_operator'];
+        // Staff roles (sales roles from PR #26 included when present on the project)
+        const allowedRoles = ['owner', 'admin', 'hq_readonly', 'print_operator', 'chief_of_sales', 'sales_rep'];
         if (!allowedRoles.includes(profile.role)) {
             await denyStaffAccess('Access denied. This admin panel is for staff only. You have been signed out.');
             return;
@@ -1498,20 +1498,40 @@ async function loadUsers() {
         <div class="table-container">
             <div class="table-header">
                 <h3>User Management</h3>
-                <button class="btn btn-primary" onclick="openAddUserModal()">Add User</button>
+                <button class="btn btn-primary" id="signInUserBtn" type="button">Sign In User</button>
             </div>
             <div id="usersTable">
                 <div style="padding: 40px; text-align: center;">
                     <div class="loading-spinner"></div>
+                    <p style="margin-top: 16px; color: var(--text-muted);">Loading users...</p>
                 </div>
             </div>
         </div>
     `;
     
     await refreshUsersTable();
+    
+    const signInBtn = document.getElementById('signInUserBtn');
+    if (signInBtn) {
+        let touchHandled = false;
+        signInBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            touchHandled = true;
+            openSignInUserModal();
+            setTimeout(() => { touchHandled = false; }, 500);
+        }, { passive: false });
+        signInBtn.addEventListener('click', (e) => {
+            if (touchHandled) return;
+            e.preventDefault();
+            e.stopPropagation();
+            openSignInUserModal();
+        });
+    }
 }
 
 async function refreshUsersTable() {
+    const container = document.getElementById('usersTable');
     try {
         const { data: users, error } = await supabaseClient
             .from('user_profiles')
@@ -1523,11 +1543,20 @@ async function refreshUsersTable() {
         renderUsersTable(users);
     } catch (error) {
         console.error('Load users error:', error);
+        if (container) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <h3>Could not load users</h3>
+                    <p style="color: var(--text-muted);">${escapeHtml(error.message || 'Unknown error')}</p>
+                </div>
+            `;
+        }
     }
 }
 
 function renderUsersTable(users) {
     const container = document.getElementById('usersTable');
+    if (!container) return;
     
     if (!users || users.length === 0) {
         container.innerHTML = '<div class="empty-state"><h3>No Users</h3></div>';
@@ -1549,13 +1578,13 @@ function renderUsersTable(users) {
             <tbody>
                 ${users.map(user => `
                     <tr>
-                        <td><strong>${user.full_name || 'N/A'}</strong></td>
-                        <td>${user.email}</td>
-                        <td><span class="status-badge">${user.role}</span></td>
-                        <td>${user.location || '-'}</td>
+                        <td><strong>${escapeHtml(user.full_name || 'N/A')}</strong></td>
+                        <td>${escapeHtml(user.email)}</td>
+                        <td><span class="status-badge">${escapeHtml(user.role)}</span></td>
+                        <td>${escapeHtml(user.location || '-')}</td>
                         <td>${formatDate(user.created_at)}</td>
                         <td>
-                            ${user.id !== currentUser.id ? `<button class="action-btn action-btn-secondary" onclick="editUser('${user.id}')">Edit Role</button>` : '<em>Current User</em>'}
+                            ${user.id !== currentUser.id ? `<button class="action-btn action-btn-secondary" onclick="editUser('${user.id}')">Edit Role</button>` : '<em>Signed in</em>'}
                         </td>
                     </tr>
                 `).join('')}
@@ -2572,8 +2601,114 @@ function viewReport(id) {
     showError('Report details view coming soon.');
 }
 
-function openAddUserModal() {
-    showError('User creation must be done through Supabase Auth. Use the Dashboard to invite users, then assign roles here.');
+function openSignInUserModal() {
+    closeSignInUserModal();
+    
+    const modalHTML = `
+        <div id="signInUserModal" class="modal-overlay" onclick="closeSignInUserModalOnOutsideClick(event)">
+            <div class="modal-content" style="max-width: 440px;" role="dialog" aria-modal="true" aria-labelledby="signInUserTitle">
+                <div class="modal-header">
+                    <h2 id="signInUserTitle">Sign In User</h2>
+                    <button type="button" onclick="closeSignInUserModal()" class="modal-close" aria-label="Close">&times;</button>
+                </div>
+                <form id="signInUserForm" onsubmit="submitSignInUser(event)">
+                    <div class="modal-body">
+                        <p style="color: var(--text-muted); font-size: 14px; margin: 0 0 16px;">
+                            Sign in with a company account already created in Supabase Auth.
+                            This replaces the current session.
+                        </p>
+                        <div class="form-group">
+                            <label for="signInUserEmail">Company Email *</label>
+                            <input type="email" id="signInUserEmail" autocomplete="username" required placeholder="user@knightwatts.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="signInUserPassword">Password *</label>
+                            <input type="password" id="signInUserPassword" autocomplete="current-password" required placeholder="••••••••">
+                        </div>
+                        <div id="signInUserError" class="error-message" style="display: none;"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="closeSignInUserModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="signInUserSubmitBtn">Sign In</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    const emailInput = document.getElementById('signInUserEmail');
+    if (emailInput) emailInput.focus();
+}
+
+function closeSignInUserModal() {
+    const modal = document.getElementById('signInUserModal');
+    if (modal) modal.remove();
+}
+
+function closeSignInUserModalOnOutsideClick(event) {
+    if (event.target.classList.contains('modal-overlay') && event.target.id === 'signInUserModal') {
+        closeSignInUserModal();
+    }
+}
+
+async function submitSignInUser(event) {
+    event.preventDefault();
+    
+    const email = document.getElementById('signInUserEmail')?.value?.trim();
+    const password = document.getElementById('signInUserPassword')?.value;
+    const errorDiv = document.getElementById('signInUserError');
+    const submitBtn = document.getElementById('signInUserSubmitBtn');
+    
+    if (errorDiv) {
+        errorDiv.style.display = 'none';
+        errorDiv.textContent = '';
+    }
+    
+    if (!email || !password) {
+        if (errorDiv) {
+            errorDiv.textContent = 'Email and password are required.';
+            errorDiv.style.display = 'block';
+        }
+        return;
+    }
+    
+    const originalText = submitBtn ? submitBtn.textContent : 'Sign In';
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Signing in...';
+    }
+    
+    try {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email,
+            password
+        });
+        
+        if (error) throw error;
+        
+        closeSignInUserModal();
+        showSuccess(`Signed in as ${email}. Use Sign Out in the sidebar to switch accounts.`);
+        
+        // Profile + panel refresh via onAuthStateChange (SIGNED_IN)
+        if (data?.user && !currentUser) {
+            await loadUserProfile(data.user);
+        }
+    } catch (error) {
+        console.error('Sign in user error:', error);
+        const message = (error.message || '').toLowerCase().includes('invalid login credentials')
+            ? 'Wrong email or password. Check the credentials created in the Supabase Auth dashboard.'
+            : (error.message || 'Sign in failed. Please try again.');
+        if (errorDiv) {
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
+    }
 }
 
 function editUser(id) {
@@ -2592,7 +2727,10 @@ window.markJobComplete = markJobComplete;
 window.markJobFailed = markJobFailed;
 window.generateDailyReport = generateDailyReport;
 window.viewReport = viewReport;
-window.openAddUserModal = openAddUserModal;
+window.openSignInUserModal = openSignInUserModal;
+window.closeSignInUserModal = closeSignInUserModal;
+window.closeSignInUserModalOnOutsideClick = closeSignInUserModalOnOutsideClick;
+window.submitSignInUser = submitSignInUser;
 window.editUser = editUser;
 window.handleImageSelect = handleImageSelect;
 window.handle3DModelSelect = handle3DModelSelect;
