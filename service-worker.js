@@ -5,7 +5,7 @@
 // IMPORTANT: bump CACHE_NAME on every admin auth / role change so iPhone PWAs
 // drop stale admin.js (old allowlists that rejected ceo/cfo/coo/cos).
 
-const CACHE_NAME = 'knight-watts-v1.4.1-ceo-login-sw-force';
+const CACHE_NAME = 'knight-watts-v1.4.2-add-staff';
 const OFFLINE_URL = '/offline.html';
 
 // Get the base path for GitHub Pages (e.g., /knight-watts-auto-parts)
@@ -44,7 +44,8 @@ const STATIC_ASSETS = [
   basePath + '/admin/sales.js',
   basePath + '/admin/sales.css',
   basePath + '/admin/roles.js',
-  basePath + '/admin/passkeys.js'
+  basePath + '/admin/passkeys.js',
+  basePath + '/admin/staff.js'
 ].filter(path => path);
 
 function isAdminShellRequest(url) {

@@ -455,8 +455,13 @@ function formatStatus(status) {
     return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
 
-function formatDate(date) {
-    return date.toLocaleDateString('en-KE', { year: 'numeric', month: 'long', day: 'numeric' });
+// Use shared null-safe formatDate from admin.js (do not overwrite with Date-only version)
+function formatDeliveryDate(date) {
+    if (typeof formatDate === 'function') return formatDate(date);
+    if (date == null) return '—';
+    const d = date instanceof Date ? date : new Date(date);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('en-KE', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
 function formatTime(timestamp) {
