@@ -31,11 +31,15 @@
 -- create_order(
 --   p_customer_name, p_customer_email, p_customer_phone, p_customer_location,
 --   p_items jsonb, p_shipping_address, p_delivery_notes,
---   p_payment_method  -- mpesa | cash | bank
+--   p_payment_method,  -- mpesa | cash | bank
+--   p_referral_code     -- optional sales referral (see sales team CRM migrations)
 -- )
 -- Direct anon INSERT on orders is denied. Use this RPC instead (POST).
 -- Returns: id, order_number, total_kes
 -- GRANT EXECUTE TO anon, authenticated
+-- ==============================================
+-- Staff roles (user_profiles.role):
+--   owner | admin | print_operator | hq_readonly | chief_of_sales | sales_rep
 -- ==============================================
 --
 -- ==============================================

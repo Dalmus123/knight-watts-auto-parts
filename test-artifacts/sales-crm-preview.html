@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EXAMPLE SEED — Sales CRM UI Preview</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../admin/admin.css">
+  <link rel="stylesheet" href="../admin/jarvis-theme.css">
+  <link rel="stylesheet" href="../admin/sales.css">
+  <style>
+    body { margin: 0; background: #0a0a0a; color: #e0e0e0; font-family: Inter, system-ui, sans-serif; }
+    .preview-banner {
+      background: #f0f0f0; color: #0a0a0a; padding: 10px 16px; font-weight: 700;
+      letter-spacing: 0.04em; text-transform: uppercase; font-size: 13px;
+    }
+    .preview-wrap { padding: 24px; max-width: 1100px; margin: 0 auto; }
+    h1 { font-size: 28px; margin: 0 0 8px; }
+  </style>
+</head>
+<body>
+  <div class="preview-banner">EXAMPLE SEED preview — mock UI only, not live data</div>
+  <div class="preview-wrap">
+    <h1>My Sales</h1>
+    <p style="color:#808080;margin-bottom:16px;">Period stats · category/product · leaderboard (Realtime)</p>
+    <div class="sales-period-toggle">
+      <button type="button">today</button>
+      <button type="button" class="active">week</button>
+      <button type="button">month</button>
+    </div>
+    <div class="sales-referral-box">
+      <label>Your referral code / link</label>
+      <div class="sales-referral-row">
+        <code>EXAMPLE01</code>
+        <code>https://example.local/?ref=EXAMPLE01</code>
+        <button type="button" class="btn btn-outline">Copy link</button>
+      </div>
+    </div>
+    <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
+      <div class="stat-card"><div class="stat-value">4</div><div class="stat-label">Orders</div></div>
+      <div class="stat-card"><div class="stat-value">3</div><div class="stat-label">Customers</div></div>
+      <div class="stat-card"><div class="stat-value">12</div><div class="stat-label">Units sold</div></div>
+      <div class="stat-card"><div class="stat-value">KES 48,200</div><div class="stat-label">Revenue</div></div>
+      <div class="stat-card"><div class="stat-value">KES 3,120</div><div class="stat-label">Commission total</div></div>
+      <div class="stat-card"><div class="stat-value">KES 1,400</div><div class="stat-label">Pending</div></div>
+    </div>
+    <div class="sales-two-col" style="margin-top:24px;">
+      <div class="table-container">
+        <div class="table-header"><h3>By category</h3></div>
+        <table class="data-table">
+          <thead><tr><th>Category</th><th>Units</th><th>Revenue</th><th>Commission</th></tr></thead>
+          <tbody>
+            <tr><td>Filters</td><td>7</td><td>KES 18,400</td><td>KES 1,288</td></tr>
+            <tr><td>Engine</td><td>3</td><td>KES 21,000</td><td>KES 1,260</td></tr>
+            <tr><td>Body</td><td>2</td><td>KES 8,800</td><td>KES 352</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="table-container">
+        <div class="table-header"><h3>Leaderboard</h3></div>
+        <ol class="sales-leaderboard" style="padding:16px 20px;">
+          <li><span class="rank">#1</span><span class="name">Amina W. <small>AMINA01</small></span><span class="meta">KES 28,000 · 8 units</span></li>
+          <li><span class="rank">#2</span><span class="name">EXAMPLE Rep <small>EXAMPLE01</small></span><span class="meta">KES 20,200 · 4 units</span></li>
+        </ol>
+      </div>
+    </div>
+
+    <h1 style="margin-top:48px;">Sales Tasks</h1>
+    <div class="sales-task-board">
+      <div class="sales-task-column"><h4>To do (1)</h4>
+        <div class="sales-task-list">
+          <div class="sales-task-item">
+            <h5>Call Garissa garage leads</h5>
+            <p>EXAMPLE SEED task description</p>
+            <div class="task-meta"><span>EXAMPLE Rep</span><span>Due 2026-11-28</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="sales-task-column"><h4>In progress (1)</h4>
+        <div class="sales-task-list">
+          <div class="sales-task-item">
+            <h5>Share Filters promo codes</h5>
+            <p>Follow up WhatsApp groups</p>
+            <div class="task-meta"><span>Amina W.</span><span>Due 2026-11-26</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="sales-task-column"><h4>Done (0)</h4>
+        <div class="sales-task-list"><p style="color:#707070;font-size:13px;padding:8px;">Empty</p></div>
+      </div>
+    </div>
+
+    <h1 style="margin-top:48px;">Commission Rules</h1>
+    <p style="color:#808080;">Live EXAMPLE SEED rows from migration (default 5%, Filters 7%, Engine 6%, Body 4%, Spark-plug 8%).</p>
+    <div class="table-container">
+      <table class="data-table">
+        <thead><tr><th>Scope</th><th>Target</th><th>Rate</th><th>Label</th></tr></thead>
+        <tbody>
+          <tr><td>default</td><td>—</td><td>5%</td><td>EXAMPLE SEED: default 5%</td></tr>
+          <tr><td>category</td><td>Filters</td><td>7%</td><td>EXAMPLE SEED: Filters 7%</td></tr>
+          <tr><td>category</td><td>Engine</td><td>6%</td><td>EXAMPLE SEED: Engine 6%</td></tr>
+          <tr><td>category</td><td>Body</td><td>4%</td><td>EXAMPLE SEED: Body 4%</td></tr>
+          <tr><td>product</td><td>Spark-plug set</td><td>8%</td><td>EXAMPLE SEED: Spark-plug set 8%</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

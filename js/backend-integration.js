@@ -200,6 +200,10 @@ async function submitOrder(orderData) {
     }
     
     try {
+        const referralCode = orderData.referralCode
+            || (typeof window !== 'undefined' && window.kwReferral && window.kwReferral.getCode())
+            || null;
+
         // Direct anon inserts are denied — use SECURITY DEFINER RPC (POST, never { get: true })
         const { data, error } = await backendClient.rpc('create_order', {
             p_customer_name: orderData.name,
@@ -209,7 +213,8 @@ async function submitOrder(orderData) {
             p_items: orderData.items,
             p_shipping_address: orderData.shippingAddress || null,
             p_delivery_notes: orderData.notes || null,
-            p_payment_method: normalizePaymentMethod(orderData.paymentMethod)
+            p_payment_method: normalizePaymentMethod(orderData.paymentMethod),
+            p_referral_code: referralCode || null
         });
         
         if (error) throw error;

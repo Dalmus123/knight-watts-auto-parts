@@ -2,7 +2,7 @@
 // Enables offline functionality and app-like experience
 // GitHub Pages compatible, safe with Supabase API calls
 
-const CACHE_NAME = 'knight-watts-v1.3.0-filaments';
+const CACHE_NAME = 'knight-watts-v1.3.1-sales-filaments';
 const OFFLINE_URL = '/offline.html';
 
 // Get the base path for GitHub Pages (e.g., /knight-watts-auto-parts)
@@ -25,6 +25,7 @@ const STATIC_ASSETS = [
   basePath + '/styles.css',
   basePath + '/app.js',
   basePath + '/js/pwa-nav.js',
+  basePath + '/js/referral.js',
   basePath + '/js/backend-integration.js',
   basePath + '/grokbot.js',
   basePath + '/ai-chat-widget.js',
@@ -36,7 +37,9 @@ const STATIC_ASSETS = [
   basePath + '/admin/index.html',
   basePath + '/admin/admin.js',
   basePath + '/admin/admin.css',
-  basePath + '/admin/jarvis-theme.css'
+  basePath + '/admin/jarvis-theme.css',
+  basePath + '/admin/sales.js',
+  basePath + '/admin/sales.css'
 ].filter(path => path);
 
 // Install event - cache static assets

@@ -1,0 +1,231 @@
+/* Sales Team CRM — monochrome / JARVIS-compatible */
+
+.sales-period-toggle {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.sales-period-toggle button {
+    background: var(--jarvis-bg-elevated, #222);
+    border: 1px solid var(--jarvis-border-primary, rgba(255, 255, 255, 0.15));
+    color: var(--jarvis-text-secondary, #b0b0b0);
+    padding: 10px 16px;
+    min-height: 44px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 14px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.sales-period-toggle button.active {
+    background: #f0f0f0;
+    color: #0a0a0a;
+    border-color: #f0f0f0;
+    font-weight: 700;
+}
+
+.sales-referral-box {
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: linear-gradient(135deg, #141414 0%, #0d0d0d 100%);
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+.sales-referral-box label {
+    display: block;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--jarvis-text-muted, #707070);
+    margin-bottom: 8px;
+}
+
+.sales-referral-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.sales-referral-row code {
+    flex: 1;
+    min-width: 180px;
+    padding: 12px 14px;
+    background: #0a0a0a;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #f5f5f5;
+    font-size: 14px;
+    word-break: break-all;
+}
+
+.sales-leaderboard {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.sales-leaderboard li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    align-items: baseline;
+}
+
+.sales-leaderboard .rank {
+    width: 28px;
+    color: var(--jarvis-text-muted, #707070);
+    font-variant-numeric: tabular-nums;
+}
+
+.sales-leaderboard .name {
+    flex: 1;
+    font-weight: 600;
+    color: #f0f0f0;
+}
+
+.sales-leaderboard .meta {
+    text-align: right;
+    font-size: 13px;
+    color: var(--jarvis-text-secondary, #b0b0b0);
+    font-variant-numeric: tabular-nums;
+}
+
+.sales-task-board {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.sales-task-column {
+    background: #121212;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    min-height: 220px;
+}
+
+.sales-task-column h4 {
+    margin: 0;
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #d0d0d0;
+}
+
+.sales-task-list {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sales-task-item {
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: #1a1a1a;
+    padding: 12px;
+}
+
+.sales-task-item h5 {
+    margin: 0 0 6px;
+    font-size: 15px;
+    color: #f2f2f2;
+}
+
+.sales-task-item p {
+    margin: 0 0 10px;
+    font-size: 13px;
+    color: #a0a0a0;
+}
+
+.sales-task-item .task-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 12px;
+    color: #808080;
+    margin-bottom: 10px;
+}
+
+.sales-task-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.sales-task-actions select,
+.sales-task-actions button,
+.sales-inline-form select,
+.sales-inline-form input,
+.sales-inline-form textarea,
+.sales-inline-form button {
+    min-height: 44px;
+}
+
+.sales-inline-form {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: #141414;
+}
+
+.sales-inline-form .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.sales-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.sales-badge.pending { color: #d0d0d0; }
+.sales-badge.approved { color: #f5f5f5; border-color: #f5f5f5; }
+.sales-badge.paid { background: #f0f0f0; color: #0a0a0a; border-color: #f0f0f0; }
+
+.sales-two-col {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 20px;
+}
+
+.sales-table-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.sales-nav-hidden {
+    display: none !important;
+}
+
+@media (max-width: 968px) {
+    .sales-task-board,
+    .sales-two-col,
+    .sales-inline-form .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .sales-referral-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .sales-period-toggle button {
+        flex: 1;
+    }
+}
