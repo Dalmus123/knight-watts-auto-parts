@@ -2,7 +2,7 @@
 // Enables offline functionality and app-like experience
 // GitHub Pages compatible, safe with Supabase API calls
 
-const CACHE_NAME = 'knight-watts-v1.2.1-status-bar';
+const CACHE_NAME = 'knight-watts-v1.3.0-sales-crm';
 const OFFLINE_URL = '/offline.html';
 
 // Get the base path for GitHub Pages (e.g., /knight-watts-auto-parts)
@@ -22,6 +22,7 @@ const STATIC_ASSETS = [
   basePath + '/styles.css',
   basePath + '/app.js',
   basePath + '/js/pwa-nav.js',
+  basePath + '/js/referral.js',
   basePath + '/grokbot.js',
   basePath + '/ai-chat-widget.js',
   basePath + '/ai-chat-widget.css',
@@ -32,7 +33,9 @@ const STATIC_ASSETS = [
   basePath + '/admin/index.html',
   basePath + '/admin/admin.js',
   basePath + '/admin/admin.css',
-  basePath + '/admin/jarvis-theme.css'
+  basePath + '/admin/jarvis-theme.css',
+  basePath + '/admin/sales.js',
+  basePath + '/admin/sales.css'
 ].filter(path => path);
 
 // Install event - cache static assets

@@ -204,8 +204,8 @@ async function loadUserProfile(user) {
             throw error;
         }
         
-        // Validate staff access - only allow owner, admin, hq_readonly, and print_operator
-        const allowedRoles = ['owner', 'admin', 'hq_readonly', 'print_operator'];
+        // Validate staff access — includes sales team CRM roles
+        const allowedRoles = ['owner', 'admin', 'hq_readonly', 'print_operator', 'chief_of_sales', 'sales_rep'];
         if (!allowedRoles.includes(profile.role)) {
             await denyStaffAccess('Access denied. This admin panel is for staff only. You have been signed out.');
             return;
@@ -242,6 +242,11 @@ function showAdminPanel() {
     ownerOnly.forEach(el => {
         el.style.display = currentUserProfile.role === 'owner' ? 'flex' : 'none';
     });
+
+    // Sales CRM nav visibility (defined in sales.js)
+    if (typeof updateSalesNavVisibility === 'function') {
+        updateSalesNavVisibility();
+    }
     
     // Don't call loadPage directly - routing will handle it
 }
@@ -394,10 +399,20 @@ async function loadPage(page) {
         deliveries: 'Delivery Schedule',
         analytics: 'Analytics & Evaluations',
         reports: 'Reports',
-        users: 'User Management'
+        users: 'User Management',
+        'my-sales': 'My Sales',
+        'sales-team': 'Sales Team',
+        'sales-tasks': 'Sales Tasks',
+        'commission-rules': 'Commission Rules',
+        'sales-reps': 'Sales Reps'
     };
     
     document.getElementById('pageTitle').textContent = titles[page] || 'Dashboard';
+
+    if (typeof unsubscribeSalesRealtime === 'function' &&
+        !['my-sales', 'sales-team', 'sales-tasks'].includes(page)) {
+        unsubscribeSalesRealtime();
+    }
     
     // Load page content
     switch (page) {
@@ -432,6 +447,21 @@ async function loadPage(page) {
             if (currentUserProfile.role === 'owner') {
                 await loadUsers();
             }
+            break;
+        case 'my-sales':
+            await loadMySalesPage();
+            break;
+        case 'sales-team':
+            await loadSalesTeamPage();
+            break;
+        case 'sales-tasks':
+            await loadSalesTasksPage();
+            break;
+        case 'commission-rules':
+            await loadCommissionRulesPage();
+            break;
+        case 'sales-reps':
+            await loadSalesRepsPage();
             break;
     }
 }
