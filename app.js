@@ -279,19 +279,24 @@ async function loadProductsFromBackend() {
             return;
         }
         
-        // Fetch active products from Supabase
+        // Fetch active auto parts from Supabase (filaments have their own catalog page)
         console.log('[Product Loader] Fetching products from backend...');
-        const result = await window.backendIntegration.getProducts();
+        const result = await window.backendIntegration.getProducts({ exclude_product_kind: 'filament' });
         
         if (!result.success || !result.products || result.products.length === 0) {
             console.warn('[Product Loader] No products from backend - using hardcoded products', result);
             return;
         }
         
-        console.log(`[Product Loader] Loaded ${result.products.length} products from Supabase`);
+        // Extra guard: never show filament consumables in the Parts grid
+        const autoPartRows = result.products.filter(
+            (p) => (p.product_kind || 'auto_part') !== 'filament'
+        );
+        
+        console.log(`[Product Loader] Loaded ${autoPartRows.length} products from Supabase`);
         
         // Map Supabase products to expected format
-        const mappedProducts = result.products.map(dbProduct => {
+        const mappedProducts = autoPartRows.map(dbProduct => {
             // Create locations object based on single location field
             const locations = {
                 embu: { 
@@ -317,6 +322,15 @@ async function loadProductsFromBackend() {
             if (dbProduct.part_number) specs['Part Number'] = dbProduct.part_number;
             if (dbProduct.sku) specs['SKU'] = dbProduct.sku;
             specs['Category'] = dbProduct.category || 'General';
+            if (dbProduct.product_kind === 'filament') {
+                if (dbProduct.filament_material) specs['Material'] = dbProduct.filament_material;
+                if (dbProduct.filament_diameter_mm) specs['Diameter'] = dbProduct.filament_diameter_mm + ' mm';
+                if (dbProduct.filament_colour) specs['Colour'] = dbProduct.filament_colour;
+                if (dbProduct.filament_spool_weight_g) {
+                    const g = dbProduct.filament_spool_weight_g;
+                    specs['Spool weight'] = (g >= 1000 && g % 1000 === 0) ? (g / 1000) + ' kg' : g + ' g';
+                }
+            }
             
             // Generate proper image URL from primary_image_path using Storage
             let imageUrl = null;
@@ -386,6 +400,7 @@ function normalizeCategoryForFilter(category) {
     const normalized = category.toLowerCase();
     
     // Map common category names to filter values
+    if (normalized.includes('filament')) return 'filament';
     if (normalized.includes('brake') || normalized.includes('suspension')) return 'brakes';
     if (normalized.includes('filter') || normalized.includes('fluid') || normalized.includes('oil')) return 'filters';
     if (normalized.includes('electric') || normalized.includes('battery') || normalized.includes('alternator')) return 'electrical';
@@ -1161,7 +1176,8 @@ function getCategoryName(category) {
         'brakes': 'Brakes & Suspension',
         'electrical': 'Electrical',
         'body': 'Body Parts',
-        'filters': 'Filters & Fluids'
+        'filters': 'Filters & Fluids',
+        'filament': 'Filament'
     };
     return categories[category] || category;
 }

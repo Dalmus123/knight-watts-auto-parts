@@ -2,7 +2,7 @@
 // Enables offline functionality and app-like experience
 // GitHub Pages compatible, safe with Supabase API calls
 
-const CACHE_NAME = 'knight-watts-v1.2.1-status-bar';
+const CACHE_NAME = 'knight-watts-v1.3.0-filaments';
 const OFFLINE_URL = '/offline.html';
 
 // Get the base path for GitHub Pages (e.g., /knight-watts-auto-parts)
@@ -17,11 +17,15 @@ const STATIC_ASSETS = [
   basePath + '/checkout.css',
   basePath + '/terms.html',
   basePath + '/3d-printing.html',
+  basePath + '/filaments.html',
+  basePath + '/filaments.css',
+  basePath + '/filaments.js',
   basePath + '/login.html',
   basePath + '/signup.html',
   basePath + '/styles.css',
   basePath + '/app.js',
   basePath + '/js/pwa-nav.js',
+  basePath + '/js/backend-integration.js',
   basePath + '/grokbot.js',
   basePath + '/ai-chat-widget.js',
   basePath + '/ai-chat-widget.css',
