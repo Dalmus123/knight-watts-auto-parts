@@ -1,8 +1,11 @@
 // Knight Watts Auto Parts - Service Worker
 // Enables offline functionality and app-like experience
 // GitHub Pages compatible, safe with Supabase API calls
+//
+// IMPORTANT: bump CACHE_NAME on every admin auth / role change so iPhone PWAs
+// drop stale admin.js (old allowlists that rejected ceo/cfo/coo/cos).
 
-const CACHE_NAME = 'knight-watts-v1.4.0-passkeys-role-dashboards';
+const CACHE_NAME = 'knight-watts-v1.4.1-ceo-login-sw-force';
 const OFFLINE_URL = '/offline.html';
 
 // Get the base path for GitHub Pages (e.g., /knight-watts-auto-parts)
@@ -44,24 +47,37 @@ const STATIC_ASSETS = [
   basePath + '/admin/passkeys.js'
 ].filter(path => path);
 
+function isAdminShellRequest(url) {
+  // Admin HTML/JS/CSS must not stick on cache-first — stale allowlists lock out new roles
+  const p = url.pathname;
+  return (
+    p.includes('/admin/') &&
+    (p.endsWith('.js') ||
+      p.endsWith('.css') ||
+      p.endsWith('.html') ||
+      p.endsWith('/admin') ||
+      p.endsWith('/admin/'))
+  );
+}
+
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
-  console.log('[Service Worker] Installing...');
-  
+  console.log('[Service Worker] Installing', CACHE_NAME);
+
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
         console.log('[Service Worker] Caching static assets');
         return cache.addAll(STATIC_ASSETS);
       })
-      .then(() => self.skipWaiting()) // Activate immediately
+      .then(() => self.skipWaiting()) // Activate immediately — force update
   );
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up old caches and force clients onto this version
 self.addEventListener('activate', (event) => {
-  console.log('[Service Worker] Activating...');
-  
+  console.log('[Service Worker] Activating', CACHE_NAME);
+
   event.waitUntil(
     caches.keys()
       .then((cacheNames) => {
@@ -74,107 +90,115 @@ self.addEventListener('activate', (event) => {
           })
         );
       })
-      .then(() => self.clients.claim()) // Take control immediately
+      .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: 'window' }))
+      .then((clientList) => {
+        clientList.forEach((client) => {
+          client.postMessage({
+            type: 'FORCE_RELOAD',
+            cacheName: CACHE_NAME,
+            reason: 'service-worker-activated'
+          });
+        });
+      })
   );
 });
 
 // Fetch event - serve from cache, fallback to network
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  
+
   // NEVER cache these (to avoid stale data):
   // - Supabase API requests
   // - Storage bucket requests (product images, 3D models)
   // - External APIs
-  const shouldBypassCache = 
+  const shouldBypassCache =
     url.hostname.includes('supabase') ||
     url.pathname.includes('/storage/v1/') ||
     url.pathname.includes('/rest/v1/') ||
     url.pathname.includes('/auth/v1/') ||
     url.pathname.includes('/functions/v1/') ||
     !url.hostname.includes(self.location.hostname);
-  
+
   if (shouldBypassCache) {
-    // Always fetch fresh from network for API/storage/external
     return event.respondWith(fetch(event.request));
   }
-  
-  // Skip non-GET requests (POST, PUT, DELETE, etc.)
+
   if (event.request.method !== 'GET') {
     return;
   }
 
-  // Cache-first strategy for static assets only
-  event.respondWith(
-    caches.match(event.request)
-      .then((cachedResponse) => {
-        // For HTML pages, use network-first (for admin uploads to work)
-        if (event.request.destination === 'document' || event.request.mode === 'navigate') {
-          return fetch(event.request)
-            .then((response) => {
-              // Cache the response
-              if (response && response.status === 200) {
-                const responseToCache = response.clone();
-                caches.open(CACHE_NAME)
-                  .then((cache) => cache.put(event.request, responseToCache));
-              }
-              return response;
-            })
-            .catch(() => {
-              // Fallback to cache if offline
-              if (cachedResponse) {
-                return cachedResponse;
-              }
-              // Show offline page
-              return caches.match(basePath + OFFLINE_URL);
-            });
-        }
-        
-        // For other static assets (CSS, JS), use cache-first
-        if (cachedResponse) {
-          return cachedResponse;
-        }
+  const networkFirst =
+    event.request.destination === 'document' ||
+    event.request.mode === 'navigate' ||
+    isAdminShellRequest(url);
 
-        // Fetch from network if not in cache
+  event.respondWith(
+    caches.match(event.request).then((cachedResponse) => {
+      if (networkFirst) {
         return fetch(event.request)
           .then((response) => {
-            // Cache successful responses
             if (response && response.status === 200) {
               const responseToCache = response.clone();
-              caches.open(CACHE_NAME)
-                .then((cache) => cache.put(event.request, responseToCache));
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(event.request, responseToCache);
+                // Also refresh unversioned admin script keys so old precache entries update
+                if (isAdminShellRequest(url)) {
+                  const bare = url.origin + url.pathname;
+                  if (bare !== event.request.url) {
+                    cache.put(bare, response.clone()).catch(() => {});
+                  }
+                }
+              });
             }
             return response;
           })
           .catch(() => {
-            // Return generic offline response for failed requests
-            return new Response('Offline', {
-              status: 503,
-              statusText: 'Service Unavailable',
-              headers: new Headers({
-                'Content-Type': 'text/plain'
-              })
-            });
+            if (cachedResponse) return cachedResponse;
+            return caches.match(basePath + OFFLINE_URL);
           });
-      })
+      }
+
+      // Storefront static assets: cache-first
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+
+      return fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
+          }
+          return response;
+        })
+        .catch(() => {
+          return new Response('Offline', {
+            status: 503,
+            statusText: 'Service Unavailable',
+            headers: new Headers({ 'Content-Type': 'text/plain' })
+          });
+        });
+    })
   );
 });
 
-// Handle messages from the client
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
-  
+
+  if (event.data && event.data.type === 'GET_CACHE_NAME') {
+    event.source?.postMessage({ type: 'CACHE_NAME', cacheName: CACHE_NAME });
+  }
+
   if (event.data && event.data.type === 'CACHE_URLS') {
     event.waitUntil(
-      caches.open(CACHE_NAME)
-        .then((cache) => cache.addAll(event.data.urls))
+      caches.open(CACHE_NAME).then((cache) => cache.addAll(event.data.urls))
     );
   }
 });
 
-// Background sync for offline orders (future feature)
 self.addEventListener('sync', (event) => {
   if (event.tag === 'sync-orders') {
     event.waitUntil(syncOrders());
@@ -182,16 +206,12 @@ self.addEventListener('sync', (event) => {
 });
 
 async function syncOrders() {
-  // Get pending orders from IndexedDB
-  // Send to server when online
-  // This will be implemented with backend integration
   console.log('[Service Worker] Syncing offline orders...');
 }
 
-// Push notifications (future feature)
 self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : {};
-  
+
   const options = {
     body: data.body || 'New update from Knight Watts Auto Parts',
     icon: '/icon-192x192.png',
@@ -209,15 +229,12 @@ self.addEventListener('push', (event) => {
   );
 });
 
-// Notification click handler
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
   if (event.notification.data && event.notification.data.url) {
-    event.waitUntil(
-      clients.openWindow(event.notification.data.url)
-    );
+    event.waitUntil(clients.openWindow(event.notification.data.url));
   }
 });
 
-console.log('[Service Worker] Loaded successfully');
+console.log('[Service Worker] Loaded', CACHE_NAME);
