@@ -7,8 +7,8 @@ let salesPeriod = 'month';
 let salesRealtimeChannel = null;
 let salesDashboardCache = null;
 
-const SALES_LEADERSHIP = ['owner', 'admin', 'chief_of_sales'];
-const SALES_STAFF = ['owner', 'admin', 'chief_of_sales', 'sales_rep'];
+const SALES_LEADERSHIP = ['owner', 'admin', 'ceo', 'cfo', 'cos', 'chief_of_sales'];
+const SALES_STAFF = ['owner', 'admin', 'ceo', 'cfo', 'cos', 'chief_of_sales', 'sales_rep'];
 
 function isSalesLeadership() {
     return SALES_LEADERSHIP.includes(currentUserProfile?.role);
@@ -678,8 +678,8 @@ async function refreshSalesTasks() {
 
 async function loadCommissionRulesPage() {
     const content = document.getElementById('contentArea');
-    if (!['owner', 'admin'].includes(currentUserProfile.role)) {
-        content.innerHTML = '<div class="empty-state"><h3>Access Denied</h3><p>Owner/Admin only.</p></div>';
+    if (!['owner', 'admin', 'ceo', 'cfo', 'cos'].includes(currentUserProfile.role)) {
+        content.innerHTML = '<div class="empty-state"><h3>Access Denied</h3><p>Finance / sales admin only.</p></div>';
         return;
     }
 
@@ -835,7 +835,7 @@ async function saveCommissionRule() {
 
 async function loadSalesRepsPage() {
     const content = document.getElementById('contentArea');
-    if (!['owner', 'admin'].includes(currentUserProfile.role)) {
+    if (!['owner', 'admin', 'ceo', 'cos'].includes(currentUserProfile.role)) {
         content.innerHTML = '<div class="empty-state"><h3>Access Denied</h3></div>';
         return;
     }

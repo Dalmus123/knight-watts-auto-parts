@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Role dashboards preview — Knight Watts</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../admin/admin.css">
+  <link rel="stylesheet" href="../admin/jarvis-theme.css">
+  <link rel="stylesheet" href="../admin/sales.css">
+  <style>
+    body { margin: 0; background: #0a0a0a; color: #e0e0e0; }
+    .preview-banner {
+      position: sticky; top: 0; z-index: 20;
+      background: #c8f542; color: #0a0a0a; padding: 10px 16px; font-weight: 700;
+      letter-spacing: 0.04em; text-transform: uppercase; font-size: 12px;
+    }
+    .role-section { padding: 20px 16px 40px; border-bottom: 1px solid #222; max-width: 1100px; margin: 0 auto; }
+    .role-section h1 { font-size: 22px; margin: 0 0 4px; }
+    .fake-sidebar {
+      display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 20px;
+    }
+    .fake-sidebar span {
+      font-size: 12px; padding: 6px 10px; border: 1px solid #333; border-radius: 6px; color: #aaa;
+    }
+    .fake-sidebar span.on { border-color: #00A86B; color: #e0e0e0; background: rgba(0,168,107,0.12); }
+  </style>
+</head>
+<body>
+  <div class="preview-banner">PREVIEW — mock role desks (not live Auth). Used for PR screenshots.</div>
+
+  <section class="role-section" id="ceo" data-role="ceo">
+    <h1>CEO desk</h1>
+    <p class="role-dash-sub">escrivanyagah5@gmail.com · everything, all departments</p>
+    <div class="fake-sidebar">
+      <span class="on">Dashboard</span><span class="on">Products</span><span class="on">Orders</span><span class="on">Telemetry</span>
+      <span class="on">Sales Team</span><span class="on">Users</span><span class="on">Security</span>
+    </div>
+    <div class="role-dash-intro">
+      <p class="role-dash-eyebrow">CEO desk</p>
+      <h2 class="role-dash-title">Company command</h2>
+      <p class="role-dash-sub">All departments · company-wide telemetry and revenue.</p>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-value">128</div><div class="stat-label">Total Orders</div></div>
+      <div class="stat-card"><div class="stat-value">1,240,500</div><div class="stat-label">Revenue (KES)</div></div>
+      <div class="stat-card"><div class="stat-value">7</div><div class="stat-label">Pending Requests</div></div>
+      <div class="stat-card"><div class="stat-value">3</div><div class="stat-label">Active Print Jobs</div></div>
+      <div class="stat-card"><div class="stat-value">892,400</div><div class="stat-label">Inventory value</div></div>
+      <div class="stat-card"><div class="stat-value">18,650</div><div class="stat-label">Commissions payable</div></div>
+    </div>
+  </section>
+
+  <section class="role-section" id="cfo" data-role="cfo">
+    <h1>CFO desk</h1>
+    <p class="role-dash-sub">dkinyua971@gmail.com · finance, commissions, stock valuation</p>
+    <div class="fake-sidebar">
+      <span class="on">Dashboard</span><span class="on">Products</span><span class="on">Orders</span><span class="on">Reports</span>
+      <span class="on">Sales Team</span><span class="on">Commission Rules</span><span>Users</span>
+    </div>
+    <div class="role-dash-intro">
+      <p class="role-dash-eyebrow">CFO desk</p>
+      <h2 class="role-dash-title">Finance desk</h2>
+      <p class="role-dash-sub">Revenue, commissions payable, stock levels, inventory valuation, reports.</p>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-value">1,240,500</div><div class="stat-label">Revenue (KES)</div></div>
+      <div class="stat-card"><div class="stat-value">128</div><div class="stat-label">Orders</div></div>
+      <div class="stat-card"><div class="stat-value">892,400</div><div class="stat-label">Inventory value</div></div>
+      <div class="stat-card"><div class="stat-value">4,120</div><div class="stat-label">Units in stock</div></div>
+      <div class="stat-card"><div class="stat-value">14</div><div class="stat-label">Low-stock SKUs</div></div>
+      <div class="stat-card"><div class="stat-value">8,200</div><div class="stat-label">Comm. pending</div></div>
+      <div class="stat-card"><div class="stat-value">10,450</div><div class="stat-label">Comm. approved</div></div>
+      <div class="stat-card"><div class="stat-value">42,000</div><div class="stat-label">Comm. paid</div></div>
+    </div>
+  </section>
+
+  <section class="role-section" id="coo" data-role="coo">
+    <h1>COO desk</h1>
+    <p class="role-dash-sub">eliudmugo07@gmail.com · orders, fulfilment, catalogue, stock, tasks</p>
+    <div class="fake-sidebar">
+      <span class="on">Dashboard</span><span class="on">Products</span><span class="on">Orders</span><span class="on">Print Queue</span>
+      <span class="on">Deliveries</span><span class="on">Sales Tasks</span><span>Reports</span>
+    </div>
+    <div class="role-dash-intro">
+      <p class="role-dash-eyebrow">COO desk</p>
+      <h2 class="role-dash-title">Operations desk</h2>
+      <p class="role-dash-sub">Orders, fulfilment, catalogue, 3D models, stock, and team tasks.</p>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-value">22</div><div class="stat-label">Orders pending</div></div>
+      <div class="stat-card"><div class="stat-value">9</div><div class="stat-label">In fulfilment</div></div>
+      <div class="stat-card"><div class="stat-value">7</div><div class="stat-label">Custom requests</div></div>
+      <div class="stat-card"><div class="stat-value">3</div><div class="stat-label">Print jobs active</div></div>
+      <div class="stat-card"><div class="stat-value">186</div><div class="stat-label">Active products</div></div>
+      <div class="stat-card"><div class="stat-value">14</div><div class="stat-label">Low-stock SKUs</div></div>
+      <div class="stat-card"><div class="stat-value">11</div><div class="stat-label">Open sales tasks</div></div>
+    </div>
+  </section>
+
+  <section class="role-section" id="cos" data-role="cos">
+    <h1>Chief of Staff desk</h1>
+    <p class="role-dash-sub">ldayanti719@gmail.com · sales team &amp; heads of sales</p>
+    <div class="fake-sidebar">
+      <span class="on">Dashboard</span><span class="on">Sales Team</span><span class="on">Sales Reps</span>
+      <span class="on">Sales Tasks</span><span class="on">Commission Rules</span><span class="on">Telemetry</span>
+    </div>
+    <div class="role-dash-intro">
+      <p class="role-dash-eyebrow">Chief of Staff desk</p>
+      <h2 class="role-dash-title">Chief of Staff — sales leadership</h2>
+      <p class="role-dash-sub">Sales telemetry, heads of sales, team tasks, reps, commission statements.</p>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-value">KES 312,000</div><div class="stat-label">Team revenue</div></div>
+      <div class="stat-card"><div class="stat-value">41</div><div class="stat-label">Team orders</div></div>
+      <div class="stat-card"><div class="stat-value">KES 18,650</div><div class="stat-label">Commission total</div></div>
+      <div class="stat-card"><div class="stat-value">KES 8,200</div><div class="stat-label">Pending commission</div></div>
+    </div>
+  </section>
+
+  <section class="role-section" id="chief_of_sales" data-role="chief_of_sales">
+    <h1>Head of Sales desk</h1>
+    <p class="role-dash-sub">chief_of_sales · their team</p>
+    <div class="fake-sidebar">
+      <span class="on">Dashboard</span><span class="on">My Sales</span><span class="on">Sales Team</span><span class="on">Sales Tasks</span>
+      <span>Sales Reps</span><span>Users</span>
+    </div>
+    <div class="role-dash-intro">
+      <p class="role-dash-eyebrow">Head of Sales desk</p>
+      <h2 class="role-dash-title">Head of Sales</h2>
+      <p class="role-dash-sub">Your sales team performance, commissions, and assigned tasks.</p>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-value">KES 210,000</div><div class="stat-label">Team revenue</div></div>
+      <div class="stat-card"><div class="stat-value">28</div><div class="stat-label">Team orders</div></div>
+      <div class="stat-card"><div class="stat-value">KES 12,400</div><div class="stat-label">Commission total</div></div>
+    </div>
+  </section>
+
+  <section class="role-section" id="sales_rep" data-role="sales_rep">
+    <h1>Sales Rep desk</h1>
+    <p class="role-dash-sub">sales001@knightwatts.co.ke · own telemetry only</p>
+    <div class="fake-sidebar">
+      <span class="on">Dashboard</span><span class="on">My Sales</span><span class="on">Sales Tasks</span><span class="on">Products</span>
+      <span>Sales Team</span><span>Users</span>
+    </div>
+    <div class="role-dash-intro">
+      <p class="role-dash-eyebrow">Sales Rep desk</p>
+      <h2 class="role-dash-title">My sales desk</h2>
+      <p class="role-dash-sub">Your telemetry, scores, customers, commission, and assigned tasks.</p>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-value">KES 48,200</div><div class="stat-label">My revenue</div></div>
+      <div class="stat-card"><div class="stat-value">4</div><div class="stat-label">My orders</div></div>
+      <div class="stat-card"><div class="stat-value">KES 3,120</div><div class="stat-label">My commission</div></div>
+      <div class="stat-card"><div class="stat-value">KES 1,400</div><div class="stat-label">Pending</div></div>
+    </div>
+  </section>
+
+  <section class="role-section" id="login-autofill" data-role="login">
+    <h1>Admin login (autofill-ready)</h1>
+    <p class="role-dash-sub">Real form · username webauthn · passkey button</p>
+    <div class="login-container" style="max-width:420px;margin:16px 0;padding:24px;border:1px solid #333;border-radius:12px;">
+      <form id="loginForm" class="login-form" method="post" action="#" autocomplete="on">
+        <div class="form-group">
+          <label for="loginEmail">Email</label>
+          <input type="email" id="loginEmail" name="username" autocomplete="username webauthn" required placeholder="admin@knightwatts.com">
+        </div>
+        <div class="form-group">
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" name="password" autocomplete="current-password" required placeholder="••••••••">
+        </div>
+        <button type="submit" class="btn btn-primary btn-large" style="width:100%;">Sign In</button>
+        <button type="button" class="btn btn-outline btn-large" style="width:100%;margin-top:12px;">Sign in with passkey</button>
+        <p class="login-passkey-hint">Face ID / Touch ID after you register a passkey. Password always works.</p>
+      </form>
+    </div>
+  </section>
+</body>
+</html>

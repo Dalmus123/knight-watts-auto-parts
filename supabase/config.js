@@ -23,7 +23,7 @@ const supabaseConfig = {
   }
 };
 
-// Initialize Supabase client with session persistence (requires @supabase/supabase-js)
+// Initialize Supabase client with session persistence (requires @supabase/supabase-js ≥ 2.105 for passkeys)
 function initSupabase() {
   if (typeof window !== 'undefined' && window.supabase && window.supabase.createClient) {
     return window.supabase.createClient(supabaseConfig.url, supabaseConfig.anonKey, {
@@ -32,11 +32,13 @@ function initSupabase() {
         autoRefreshToken: true,
         detectSessionInUrl: true,
         storage: window.localStorage,
-        storageKey: 'knight-watts-admin-auth'
+        storageKey: 'knight-watts-admin-auth',
+        // Experimental passkey / WebAuthn API (registerPasskey, signInWithPasskey)
+        experimental: { passkey: true }
       }
     });
   }
-  console.error('Supabase client library not loaded. Include: https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');
+  console.error('Supabase client library not loaded. Include: https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2');
   return null;
 }
 

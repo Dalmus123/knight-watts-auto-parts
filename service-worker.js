@@ -2,7 +2,7 @@
 // Enables offline functionality and app-like experience
 // GitHub Pages compatible, safe with Supabase API calls
 
-const CACHE_NAME = 'knight-watts-v1.3.2-sales-sign-in-user';
+const CACHE_NAME = 'knight-watts-v1.4.0-passkeys-role-dashboards';
 const OFFLINE_URL = '/offline.html';
 
 // Get the base path for GitHub Pages (e.g., /knight-watts-auto-parts)
@@ -39,7 +39,9 @@ const STATIC_ASSETS = [
   basePath + '/admin/admin.css',
   basePath + '/admin/jarvis-theme.css',
   basePath + '/admin/sales.js',
-  basePath + '/admin/sales.css'
+  basePath + '/admin/sales.css',
+  basePath + '/admin/roles.js',
+  basePath + '/admin/passkeys.js'
 ].filter(path => path);
 
 // Install event - cache static assets
