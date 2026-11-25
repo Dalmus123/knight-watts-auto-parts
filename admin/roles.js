@@ -22,7 +22,7 @@ const PAGE_ROLES = {
   deliveries: ['owner', 'admin', 'ceo', 'coo', 'hq_readonly'],
   analytics: ['owner', 'admin', 'ceo', 'cfo', 'cos', 'hq_readonly'],
   reports: ['owner', 'admin', 'ceo', 'cfo', 'hq_readonly'],
-  users: ['owner', 'ceo'],
+  users: ['owner', 'admin', 'ceo', 'cos'],
   security: STAFF_ROLES,
   'my-sales': ['owner', 'admin', 'ceo', 'cfo', 'cos', 'chief_of_sales', 'sales_rep'],
   'sales-team': ['owner', 'admin', 'ceo', 'cfo', 'cos', 'chief_of_sales'],

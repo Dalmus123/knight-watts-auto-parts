@@ -84,7 +84,7 @@ function setupPasskeyLogin() {
 }
 
 // Service Worker Update Handling — force new versions (stale admin.js omitted ceo/cfo/coo/cos)
-const EXPECTED_SW_CACHE = 'knight-watts-v1.4.1-ceo-login-sw-force';
+const EXPECTED_SW_CACHE = 'knight-watts-v1.4.2-add-staff';
 let swForceReloading = false;
 
 function forceAppReload(reason) {
@@ -271,6 +271,15 @@ async function loadUserProfile(user) {
         
         currentUser = user;
         currentUserProfile = profile;
+
+        // Forced first-login / post-reset password change — block all admin pages
+        if (profile.must_change_password) {
+            if (typeof removePasswordGates === 'function') removePasswordGates();
+            if (typeof showMustChangePasswordScreen === 'function') {
+                showMustChangePasswordScreen(profile);
+                return;
+            }
+        }
         
         showAdminPanel();
     } catch (error) {
@@ -282,11 +291,20 @@ async function loadUserProfile(user) {
 function showLoginScreen() {
     document.getElementById('loginScreen').style.display = 'flex';
     document.getElementById('adminPanel').style.display = 'none';
+    if (typeof removePasswordGates === 'function') removePasswordGates();
     currentUser = null;
     currentUserProfile = null;
 }
 
 function showAdminPanel() {
+    // Never show admin chrome while password change is required
+    if (currentUserProfile?.must_change_password) {
+        if (typeof showMustChangePasswordScreen === 'function') {
+            showMustChangePasswordScreen(currentUserProfile);
+        }
+        return;
+    }
+
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('adminPanel').style.display = 'flex';
     
@@ -521,8 +539,13 @@ async function loadPage(page) {
             await loadReports();
             break;
         case 'users':
-            if (['owner', 'ceo'].includes(currentUserProfile.role)) {
-                await loadUsers();
+            if (['owner', 'admin', 'ceo', 'cos'].includes(currentUserProfile.role)) {
+                if (typeof window.loadUsers === 'function') {
+                    await window.loadUsers();
+                } else {
+                    document.getElementById('contentArea').innerHTML =
+                        '<div class="empty-state"><h3>Staff module failed to load</h3></div>';
+                }
             }
             break;
         case 'security':
@@ -1608,120 +1631,21 @@ function renderReportsTable(reports) {
     container.innerHTML = html;
 }
 
-// User Management Page (Owner only)
-async function loadUsers() {
-    const content = document.getElementById('contentArea');
-    
-    content.innerHTML = `
-        <div class="table-container">
-            <div class="table-header">
-                <h3>User Management</h3>
-                <button class="btn btn-primary" id="signInUserBtn" type="button">Sign In User</button>
-            </div>
-            <div id="usersTable">
-                <div style="padding: 40px; text-align: center;">
-                    <div class="loading-spinner"></div>
-                    <p style="margin-top: 16px; color: var(--text-muted);">Loading users...</p>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    await refreshUsersTable();
-    
-    const signInBtn = document.getElementById('signInUserBtn');
-    if (signInBtn) {
-        let touchHandled = false;
-        signInBtn.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            touchHandled = true;
-            openSignInUserModal();
-            setTimeout(() => { touchHandled = false; }, 500);
-        }, { passive: false });
-        signInBtn.addEventListener('click', (e) => {
-            if (touchHandled) return;
-            e.preventDefault();
-            e.stopPropagation();
-            openSignInUserModal();
-        });
-    }
-}
-
-async function refreshUsersTable() {
-    const container = document.getElementById('usersTable');
-    try {
-        const { data: users, error } = await supabaseClient
-            .from('user_profiles')
-            .select('*')
-            .order('created_at', { ascending: false });
-        
-        if (error) throw error;
-        
-        renderUsersTable(users);
-    } catch (error) {
-        console.error('Load users error:', error);
-        if (container) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <h3>Could not load users</h3>
-                    <p style="color: var(--text-muted);">${escapeHtml(error.message || 'Unknown error')}</p>
-                </div>
-            `;
-        }
-    }
-}
-
-function renderUsersTable(users) {
-    const container = document.getElementById('usersTable');
-    if (!container) return;
-    
-    if (!users || users.length === 0) {
-        container.innerHTML = '<div class="empty-state"><h3>No Users</h3></div>';
-        return;
-    }
-    
-    const html = `
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Location</th>
-                    <th>Created</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${users.map(user => `
-                    <tr>
-                        <td><strong>${escapeHtml(user.full_name || 'N/A')}</strong></td>
-                        <td>${escapeHtml(user.email)}</td>
-                        <td><span class="status-badge">${escapeHtml(user.role)}</span></td>
-                        <td>${escapeHtml(user.location || '-')}</td>
-                        <td>${formatDate(user.created_at)}</td>
-                        <td>
-                            ${user.id !== currentUser.id ? `<button class="action-btn action-btn-secondary" onclick="editUser('${user.id}')">Edit Role</button>` : '<em>Signed in</em>'}
-                        </td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    `;
-    
-    container.innerHTML = html;
-}
+// User Management — implemented in staff.js (Add Staff, reset, disable, password gate)
 
 // Helper Functions
 function formatCurrency(amount) {
     return parseFloat(amount || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function formatDate(dateString) {
-    const date = new Date(dateString);
+/** Null-safe; accepts Date, ISO string, or timestamp. (deliveries.js must not overwrite this.) */
+function formatDate(value) {
+    if (value == null || value === '') return '—';
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '—';
     return date.toLocaleDateString('en-KE', { year: 'numeric', month: 'short', day: 'numeric' });
 }
+window.formatDate = formatDate;
 
 function showError(message) {
     // Simple error display - could be improved with toast notifications
@@ -2726,13 +2650,13 @@ function openSignInUserModal() {
         <div id="signInUserModal" class="modal-overlay" onclick="closeSignInUserModalOnOutsideClick(event)">
             <div class="modal-content" style="max-width: 440px;" role="dialog" aria-modal="true" aria-labelledby="signInUserTitle">
                 <div class="modal-header">
-                    <h2 id="signInUserTitle">Sign In User</h2>
+                    <h2 id="signInUserTitle">Switch account</h2>
                     <button type="button" onclick="closeSignInUserModal()" class="modal-close" aria-label="Close">&times;</button>
                 </div>
                 <form id="signInUserForm" method="post" action="#" autocomplete="on" onsubmit="submitSignInUser(event)">
                     <div class="modal-body">
                         <p style="color: var(--text-muted); font-size: 14px; margin: 0 0 16px;">
-                            Sign in with a company account already created in Supabase Auth.
+                            Switch to another company account already created in Supabase Auth.
                             This replaces the current session. Password or passkey (Face ID / Touch ID).
                         </p>
                         <div class="form-group">
