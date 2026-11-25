@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta name="description" content="3D printer filaments in Kenya — PLA, PETG, ABS, TPU, ASA. Shop spools by material, diameter, colour, and weight at Knight Watts Auto Parts.">
+    <title>Filaments | Knight Watts Auto Parts | 3D Printer Filament Kenya</title>
+
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#212529" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#212529">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="no">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Knight Watts">
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192x192.png">
+    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="filaments.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <svg width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+                        <path d="M20 5L35 15V25L20 35L5 25V15L20 5Z" stroke="#ADB5BD" stroke-width="2" fill="none"/>
+                        <circle cx="20" cy="20" r="6" fill="#ADB5BD"/>
+                        <path d="M15 20L18 23L25 16" stroke="#212529" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>KNIGHT <span class="ke">WATTS</span></span>
+                </div>
+                <nav class="nav" aria-label="Main">
+                    <a href="index.html" class="nav-link">Home</a>
+                    <a href="index.html#products" class="nav-link">Parts</a>
+                    <a href="filaments.html" class="nav-link active">Filaments</a>
+                    <a href="3d-printing.html" class="nav-link">3D Printing</a>
+                    <a href="index.html#locations" class="nav-link">Locations</a>
+                    <a href="index.html#contact" class="nav-link">Contact</a>
+                </nav>
+                <div class="header-actions">
+                    <a class="cart-btn" href="checkout.html" title="View Cart & Checkout">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <circle cx="9" cy="21" r="1"></circle>
+                            <circle cx="20" cy="21" r="1"></circle>
+                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                        </svg>
+                        <span class="cart-count">0</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section class="filaments-hero">
+        <div class="container">
+            <p class="hero-eyebrow">3D Printing Supplies</p>
+            <h1>KNIGHT WATTS <span class="highlight">Filaments</span></h1>
+            <p class="hero-subtitle">PLA, PETG, ABS, TPU &amp; ASA spools for printers in Embu &amp; Garissa. Filter by material, diameter, colour, weight, brand, and price (KES).</p>
+        </div>
+    </section>
+
+    <section class="filaments-filters-section" aria-label="Filament filters">
+        <div class="container">
+            <div class="filaments-filters" id="filamentFilters">
+                <div class="filter-group">
+                    <label for="filterMaterial">Material</label>
+                    <select id="filterMaterial" class="filter-select">
+                        <option value="">All materials</option>
+                        <option value="PLA">PLA</option>
+                        <option value="PETG">PETG</option>
+                        <option value="ABS">ABS</option>
+                        <option value="TPU">TPU</option>
+                        <option value="ASA">ASA</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filterDiameter">Diameter</label>
+                    <select id="filterDiameter" class="filter-select">
+                        <option value="">All diameters</option>
+                        <option value="1.75">1.75 mm</option>
+                        <option value="2.85">2.85 mm</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filterColour">Colour</label>
+                    <select id="filterColour" class="filter-select">
+                        <option value="">All colours</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filterSpool">Spool weight</label>
+                    <select id="filterSpool" class="filter-select">
+                        <option value="">All weights</option>
+                        <option value="500">500 g</option>
+                        <option value="750">750 g</option>
+                        <option value="1000">1 kg</option>
+                        <option value="2000">2 kg</option>
+                        <option value="3000">3 kg</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filterBrand">Brand</label>
+                    <select id="filterBrand" class="filter-select">
+                        <option value="">All brands</option>
+                    </select>
+                </div>
+                <div class="filter-group filter-group--price">
+                    <label>Price (KES)</label>
+                    <div class="price-row">
+                        <input type="number" id="filterPriceMin" class="filter-input" min="0" step="50" placeholder="Min" inputmode="numeric">
+                        <input type="number" id="filterPriceMax" class="filter-input" min="0" step="50" placeholder="Max" inputmode="numeric">
+                    </div>
+                </div>
+                <div class="filter-actions">
+                    <button type="button" class="btn-clear" id="clearFilamentFilters">Clear filters</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="filaments-catalog">
+        <div class="container">
+            <div class="catalog-header">
+                <h2>Filament catalog</h2>
+                <p class="result-count" id="filamentResultCount">Loading…</p>
+            </div>
+            <div class="filaments-grid" id="filamentsGrid" aria-live="polite">
+                <!-- Populated by filaments.js -->
+            </div>
+        </div>
+    </section>
+
+    <div class="modal filament-modal" id="filamentDetailModal" role="dialog" aria-modal="true" aria-labelledby="filamentDetailName" hidden>
+        <div class="modal-content" style="position: relative;">
+            <button type="button" class="modal-close" id="closeFilamentModal" aria-label="Close">&times;</button>
+            <div class="modal-header-block">
+                <h3 id="filamentDetailName">Filament</h3>
+                <p class="modal-price" id="filamentDetailPrice">KES 0</p>
+            </div>
+            <div class="modal-body-block">
+                <p id="filamentDetailDescription"></p>
+                <table class="spec-table" id="filamentDetailSpecs">
+                    <tbody></tbody>
+                </table>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-primary" id="filamentAddToCart">Add to Cart</button>
+                    <a href="3d-printing.html" class="btn btn-secondary" style="text-decoration: none;">Custom 3D Print</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Knight Watts Auto Parts</h4>
+                    <p>Auto parts and 3D printing supplies for Eastern Kenya.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <a href="index.html#products">Browse Parts</a>
+                    <a href="filaments.html">Filaments</a>
+                    <a href="3d-printing.html">3D Printing</a>
+                    <a href="index.html#contact">Contact</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Payment Methods</h4>
+                    <p>M-Pesa, Cash, Bank Transfer</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024-2026 Knight Watts Auto Parts. A Subsidiary of Knight Watts Energy Solutions Limited.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase/config.js"></script>
+    <script src="js/backend-integration.js"></script>
+    <script src="js/pwa-nav.js"></script>
+    <script src="filaments.js"></script>
+</body>
+</html>

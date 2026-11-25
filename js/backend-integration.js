@@ -280,12 +280,22 @@ async function getProducts(filters = {}) {
             .select('*')
             .eq('is_active', true);
         
+        if (filters.product_kind) {
+            query = query.eq('product_kind', filters.product_kind);
+        } else if (filters.exclude_product_kind) {
+            query = query.neq('product_kind', filters.exclude_product_kind);
+        }
+        
         if (filters.category) {
             query = query.eq('category', filters.category);
         }
         
         if (filters.location) {
             query = query.eq('location', filters.location);
+        }
+        
+        if (filters.filament_material) {
+            query = query.eq('filament_material', filters.filament_material);
         }
         
         const { data, error } = await query.order('featured', { ascending: false });

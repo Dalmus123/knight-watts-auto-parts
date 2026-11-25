@@ -679,14 +679,19 @@ async function loadProducts() {
     }
     
     content.innerHTML = `
-        <div class="search-filter-bar">
+            <div class="search-filter-bar">
             <div class="search-box">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="11" cy="11" r="8"></circle>
                     <path d="m21 21-4.35-4.35"></path>
                 </svg>
-                <input type="text" placeholder="Search products..." id="productSearch">
+                <input type="text" placeholder="Search products, filaments, material…" id="productSearch">
             </div>
+            <select id="productKindFilter" class="filter-select" style="max-width: 160px;" title="Filter by product type">
+                <option value="">All types</option>
+                <option value="auto_part">Auto Parts</option>
+                <option value="filament">Filaments</option>
+            </select>
             <button class="btn btn-primary" id="addProductBtn">Add Product</button>
         </div>
         
@@ -731,12 +736,17 @@ async function loadProducts() {
         });
     }
     
-    // Attach search functionality
+    // Attach search + type filter
     const searchInput = document.getElementById('productSearch');
+    const kindFilter = document.getElementById('productKindFilter');
+    const runProductFilter = () => {
+        filterProducts(searchInput ? searchInput.value : '', kindFilter ? kindFilter.value : '');
+    };
     if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-            filterProducts(e.target.value);
-        });
+        searchInput.addEventListener('input', runProductFilter);
+    }
+    if (kindFilter) {
+        kindFilter.addEventListener('change', runProductFilter);
     }
 }
 
@@ -757,20 +767,24 @@ async function refreshProductsTable() {
     }
 }
 
-function filterProducts(searchTerm) {
-    if (!searchTerm || searchTerm.trim() === '') {
-        renderProductsTable(allProducts);
-        return;
-    }
+function filterProducts(searchTerm, kindFilter) {
+    const term = (searchTerm || '').toLowerCase().trim();
+    const kind = kindFilter || '';
     
-    const term = searchTerm.toLowerCase().trim();
     const filtered = allProducts.filter(product => {
+        if (kind && (product.product_kind || 'auto_part') !== kind) {
+            return false;
+        }
+        if (!term) return true;
         return (
             product.name?.toLowerCase().includes(term) ||
             product.category?.toLowerCase().includes(term) ||
             product.location?.toLowerCase().includes(term) ||
             product.sku?.toLowerCase().includes(term) ||
-            product.manufacturer?.toLowerCase().includes(term)
+            product.manufacturer?.toLowerCase().includes(term) ||
+            product.product_kind?.toLowerCase().includes(term) ||
+            product.filament_material?.toLowerCase().includes(term) ||
+            product.filament_colour?.toLowerCase().includes(term)
         );
     });
     
@@ -806,7 +820,7 @@ function renderProductsTable(products) {
                         <div class="product-card-content">
                             <h4>${product.name}</h4>
                             <div class="product-card-meta">
-                                <span class="product-card-category">${product.category}</span>
+                                <span class="product-card-category">${product.product_kind === 'filament' ? 'Filament · ' : ''}${product.category}${product.product_kind === 'filament' && product.filament_material ? ' · ' + product.filament_material : ''}</span>
                                 <span class="product-card-location">📍 ${product.location}</span>
                             </div>
                             <div class="product-card-price">KES ${formatCurrency(product.price_kes)}</div>
@@ -873,8 +887,8 @@ function renderProductsTable(products) {
                                     '<div style="width: 60px; height: 60px; background: var(--surface-color); border-radius: 4px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); font-size: 24px;">📦</div>'
                                 }
                             </td>
-                            <td><strong>${product.name}</strong></td>
-                            <td>${product.category}</td>
+                            <td><strong>${product.name}</strong>${product.product_kind === 'filament' ? ' <span class="status-badge completed" style="font-size: 10px;">Filament</span>' : ''}</td>
+                            <td>${product.product_kind === 'filament' && product.filament_material ? `${product.filament_material} · ${product.category}` : product.category}</td>
                             <td>KES ${formatCurrency(product.price_kes)}</td>
                             <td>
                                 ${product.stock_quantity}
@@ -1630,12 +1644,62 @@ function openAddProductModal() {
                         
                         <div class="form-row">
                             <div class="form-group">
-                                <label>Category *</label>
-                                <input type="text" id="productCategory" placeholder="e.g., Brake Pads, Filters" required>
+                                <label>Product Type *</label>
+                                <select id="productKind" required onchange="toggleFilamentSection()">
+                                    <option value="auto_part" selected>Auto Part</option>
+                                    <option value="filament">3D Filament</option>
+                                </select>
                             </div>
                             <div class="form-group">
                                 <label>Location *</label>
                                 <input type="text" id="productLocation" placeholder="e.g., Embu, Garissa" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Category *</label>
+                                <input type="text" id="productCategory" placeholder="e.g., Brake Pads, Filters" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Brand / Manufacturer</label>
+                                <input type="text" id="productManufacturer" placeholder="e.g., Bosch, eSUN, Polymaker">
+                            </div>
+                        </div>
+                        
+                        <div id="filamentSection" style="display: none; border-left: 3px solid var(--primary-color); padding-left: 16px; margin: 8px 0 16px;">
+                            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Filament specs (required for filament products)</p>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Material *</label>
+                                    <select id="filamentMaterial">
+                                        <option value="">Select material</option>
+                                        <option value="PLA">PLA</option>
+                                        <option value="PETG">PETG</option>
+                                        <option value="ABS">ABS</option>
+                                        <option value="TPU">TPU</option>
+                                        <option value="ASA">ASA</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Diameter (mm) *</label>
+                                    <select id="filamentDiameter">
+                                        <option value="">Select diameter</option>
+                                        <option value="1.75">1.75 mm</option>
+                                        <option value="2.85">2.85 mm</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Colour *</label>
+                                    <input type="text" id="filamentColour" placeholder="e.g., Black, White, Red">
+                                </div>
+                                <div class="form-group">
+                                    <label>Spool weight (g) *</label>
+                                    <input type="number" id="filamentSpoolWeight" min="1" step="1" placeholder="e.g., 1000 for 1 kg">
+                                </div>
                             </div>
                         </div>
                         
@@ -1658,7 +1722,7 @@ function openAddProductModal() {
                         <div class="form-row">
                             <div class="form-group">
                                 <label>SKU</label>
-                                <input type="text" id="productSKU" placeholder="e.g., BP-001">
+                                <input type="text" id="productSKU" placeholder="e.g., BP-001 or FIL-PLA-175-BLK">
                             </div>
                             <div class="form-group">
                                 <label>Low Stock Threshold</label>
@@ -1673,15 +1737,12 @@ function openAddProductModal() {
                             <div id="imagePreview" style="margin-top: 8px;"></div>
                         </div>
                         
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Manufacturer</label>
-                                <input type="text" id="productManufacturer" placeholder="e.g., Bosch, Denso">
-                            </div>
+                        <div class="form-row" id="partNumberRow">
                             <div class="form-group">
                                 <label>Part Number</label>
                                 <input type="text" id="productPartNumber">
                             </div>
+                            <div class="form-group"></div>
                         </div>
                         
                         <div class="form-group">
@@ -1802,12 +1863,59 @@ async function editProduct(id) {
                             
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label>Category *</label>
-                                    <input type="text" id="productCategory" value="${escapeHtml(product.category)}" required>
+                                    <label>Product Type *</label>
+                                    <select id="productKind" required onchange="toggleFilamentSection()">
+                                        <option value="auto_part" ${(product.product_kind || 'auto_part') === 'auto_part' ? 'selected' : ''}>Auto Part</option>
+                                        <option value="filament" ${product.product_kind === 'filament' ? 'selected' : ''}>3D Filament</option>
+                                    </select>
                                 </div>
                                 <div class="form-group">
                                     <label>Location *</label>
                                     <input type="text" id="productLocation" value="${escapeHtml(product.location)}" required>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Category *</label>
+                                    <input type="text" id="productCategory" value="${escapeHtml(product.category)}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Brand / Manufacturer</label>
+                                    <input type="text" id="productManufacturer" value="${escapeHtml(product.manufacturer || '')}" placeholder="e.g., Bosch, eSUN, Polymaker">
+                                </div>
+                            </div>
+                            
+                            <div id="filamentSection" style="display: ${product.product_kind === 'filament' ? 'block' : 'none'}; border-left: 3px solid var(--primary-color); padding-left: 16px; margin: 8px 0 16px;">
+                                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Filament specs (required for filament products)</p>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Material *</label>
+                                        <select id="filamentMaterial">
+                                            <option value="">Select material</option>
+                                            ${['PLA','PETG','ABS','TPU','ASA','Other'].map(m =>
+                                                `<option value="${m}" ${product.filament_material === m ? 'selected' : ''}>${m}</option>`
+                                            ).join('')}
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Diameter (mm) *</label>
+                                        <select id="filamentDiameter">
+                                            <option value="">Select diameter</option>
+                                            <option value="1.75" ${String(product.filament_diameter_mm) === '1.75' ? 'selected' : ''}>1.75 mm</option>
+                                            <option value="2.85" ${String(product.filament_diameter_mm) === '2.85' ? 'selected' : ''}>2.85 mm</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Colour *</label>
+                                        <input type="text" id="filamentColour" value="${escapeHtml(product.filament_colour || '')}" placeholder="e.g., Black, White, Red">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Spool weight (g) *</label>
+                                        <input type="number" id="filamentSpoolWeight" min="1" step="1" value="${product.filament_spool_weight_g || ''}" placeholder="e.g., 1000 for 1 kg">
+                                    </div>
                                 </div>
                             </div>
                             
@@ -1853,15 +1961,12 @@ async function editProduct(id) {
                                 <div id="imagePreview" style="margin-top: 8px;"></div>
                             </div>
                             
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Manufacturer</label>
-                                    <input type="text" id="productManufacturer" value="${escapeHtml(product.manufacturer || '')}">
-                                </div>
+                            <div class="form-row" id="partNumberRow">
                                 <div class="form-group">
                                     <label>Part Number</label>
                                     <input type="text" id="productPartNumber" value="${escapeHtml(product.part_number || '')}">
                                 </div>
+                                <div class="form-group"></div>
                             </div>
                             
                             <div class="form-group">
@@ -2083,6 +2188,7 @@ async function saveProduct(event) {
     
     try {
         const has3DModel = document.getElementById('productHas3DModel').checked;
+        const productKind = document.getElementById('productKind')?.value || 'auto_part';
         
         // Validate 3D model if enabled
         if (has3DModel && !currentEditingProductId && !selected3DModelFile) {
@@ -2092,9 +2198,37 @@ async function saveProduct(event) {
             return;
         }
         
+        let filamentMaterial = null;
+        let filamentDiameter = null;
+        let filamentColour = null;
+        let filamentSpoolWeight = null;
+        
+        if (productKind === 'filament') {
+            filamentMaterial = document.getElementById('filamentMaterial')?.value || '';
+            filamentDiameter = document.getElementById('filamentDiameter')?.value || '';
+            filamentColour = document.getElementById('filamentColour')?.value.trim() || '';
+            filamentSpoolWeight = document.getElementById('filamentSpoolWeight')?.value || '';
+            
+            if (!filamentMaterial || !filamentDiameter || !filamentColour || !filamentSpoolWeight) {
+                showError('Filament products require material, diameter, colour, and spool weight');
+                saveBtn.disabled = false;
+                saveBtnText.textContent = originalText;
+                return;
+            }
+            
+            filamentDiameter = parseFloat(filamentDiameter);
+            filamentSpoolWeight = parseInt(filamentSpoolWeight, 10);
+            
+            // Default category for filaments if left blank/generic
+            const catEl = document.getElementById('productCategory');
+            if (catEl && !catEl.value.trim()) {
+                catEl.value = 'Filament';
+            }
+        }
+        
         const productData = {
             name: document.getElementById('productName').value.trim(),
-            category: document.getElementById('productCategory').value.trim(),
+            category: document.getElementById('productCategory').value.trim() || (productKind === 'filament' ? 'Filament' : ''),
             location: document.getElementById('productLocation').value.trim(),
             price_kes: parseFloat(document.getElementById('productPrice').value),
             stock_quantity: parseInt(document.getElementById('productStock').value),
@@ -2106,6 +2240,11 @@ async function saveProduct(event) {
             is_active: document.getElementById('productActive').checked,
             featured: document.getElementById('productFeatured').checked,
             has_3d_model: has3DModel,
+            product_kind: productKind,
+            filament_material: productKind === 'filament' ? filamentMaterial : null,
+            filament_diameter_mm: productKind === 'filament' ? filamentDiameter : null,
+            filament_colour: productKind === 'filament' ? filamentColour : null,
+            filament_spool_weight_g: productKind === 'filament' ? filamentSpoolWeight : null,
             created_by: currentUser.id
         };
         
@@ -2279,6 +2418,28 @@ function toggle3DModelSection() {
     const section = document.getElementById('3dModelSection');
     if (checkbox && section) {
         section.style.display = checkbox.checked ? 'block' : 'none';
+    }
+}
+
+function toggleFilamentSection() {
+    const kind = document.getElementById('productKind')?.value || 'auto_part';
+    const section = document.getElementById('filamentSection');
+    const categoryInput = document.getElementById('productCategory');
+    const partNumberRow = document.getElementById('partNumberRow');
+    
+    if (section) {
+        section.style.display = kind === 'filament' ? 'block' : 'none';
+    }
+    
+    if (kind === 'filament' && categoryInput && !categoryInput.value.trim()) {
+        categoryInput.value = 'Filament';
+        categoryInput.placeholder = 'Filament';
+    } else if (kind === 'auto_part' && categoryInput) {
+        categoryInput.placeholder = 'e.g., Brake Pads, Filters';
+    }
+    
+    if (partNumberRow) {
+        partNumberRow.style.display = kind === 'filament' ? 'none' : 'flex';
     }
 }
 
@@ -2471,3 +2632,4 @@ window.closeProductModal = closeProductModal;
 window.closeModalOnOutsideClick = closeModalOnOutsideClick;
 window.confirmDeleteProduct = confirmDeleteProduct;
 window.toggle3DModelSection = toggle3DModelSection;
+window.toggleFilamentSection = toggleFilamentSection;

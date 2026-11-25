@@ -48,4 +48,4 @@ Referral links: `https://yoursite/?ref=CODE01` (also works on checkout).
 
 ## Service worker
 
-Cache bumped to `knight-watts-v1.3.0-sales-crm` so PWAs pick up sales assets + referral helper.
+Cache bumped to `knight-watts-v1.3.1-sales-filaments` so PWAs pick up sales assets, referral helper, and Filaments pages together.
