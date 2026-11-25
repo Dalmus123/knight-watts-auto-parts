@@ -91,4 +91,8 @@ Home routes after sign-in: CEO → company dashboard; CFO → finance desk; COO 
 
 ## Service worker
 
-Cache bumped to `knight-watts-v1.4.0-passkeys-role-dashboards` (includes `admin/roles.js`, `admin/passkeys.js`).
+Cache bumped to `knight-watts-v1.4.1-ceo-login-sw-force`. Admin HTML/JS/CSS use **network-first**; on activate the SW posts `FORCE_RELOAD` so iPhone PWAs do not keep a stale `admin.js` allowlist that rejected `ceo` / `cfo` / `coo` / `cos`.
+
+### Login bug after #28 (fixed in follow-up)
+
+Auth succeeded (`last_sign_in_at` set) but the panel signed the user out: a cache-first service worker could still serve pre-#28 `admin.js` whose `allowedRoles` omitted C-suite. RLS already allows every user to `SELECT` their own `user_profiles` row (`users_own_profile`). GitHub Pages had the merged files; the stale SW was the failure mode.

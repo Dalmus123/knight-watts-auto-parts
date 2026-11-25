@@ -83,33 +83,70 @@ function setupPasskeyLogin() {
     });
 }
 
-// Service Worker Update Handling
+// Service Worker Update Handling — force new versions (stale admin.js omitted ceo/cfo/coo/cos)
+const EXPECTED_SW_CACHE = 'knight-watts-v1.4.1-ceo-login-sw-force';
+let swForceReloading = false;
+
+function forceAppReload(reason) {
+    if (swForceReloading) return;
+    swForceReloading = true;
+    console.info('[Admin] Forcing reload:', reason);
+    const url = new URL(window.location.href);
+    url.searchParams.set('sw', Date.now().toString(36));
+    window.location.replace(url.toString());
+}
+
 function setupServiceWorkerUpdate() {
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('../service-worker.js').then(registration => {
-            // Check for updates every 60 seconds
-            setInterval(() => {
-                registration.update();
-            }, 60000);
-            
-            // Listen for updates
-            registration.addEventListener('updatefound', () => {
-                const newWorker = registration.installing;
-                
-                newWorker.addEventListener('statechange', () => {
-                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        // New service worker available
+    if (!('serviceWorker' in navigator)) return;
+
+    navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data?.type === 'FORCE_RELOAD') {
+            forceAppReload(event.data.reason || 'FORCE_RELOAD');
+        }
+        if (event.data?.type === 'CACHE_NAME' && event.data.cacheName &&
+            event.data.cacheName !== EXPECTED_SW_CACHE) {
+            forceAppReload('cache-name-mismatch');
+        }
+    });
+
+    navigator.serviceWorker.register('../service-worker.js').then((registration) => {
+        const activateWaiting = () => {
+            if (registration.waiting) {
+                registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+            }
+        };
+
+        // If a waiting worker already exists, take it immediately
+        activateWaiting();
+
+        registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (!newWorker) return;
+            newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed') {
+                    if (navigator.serviceWorker.controller) {
+                        // Auto-activate — don't wait for the banner click
+                        newWorker.postMessage({ type: 'SKIP_WAITING' });
                         showUpdateNotification();
                     }
-                });
+                }
             });
         });
-        
-        // Handle controller change (when new SW takes over)
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-            window.location.reload();
-        });
-    }
+
+        // Ask the active worker its cache name; mismatch → reload
+        if (navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({ type: 'GET_CACHE_NAME' });
+        }
+
+        // Check for updates on load and every 30s
+        registration.update().catch(() => {});
+        setInterval(() => registration.update().catch(() => {}), 30000);
+    }).catch((err) => console.warn('SW register failed', err));
+
+    // Handle controller change (when new SW takes over)
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        forceAppReload('controllerchange');
+    });
 }
 
 function showUpdateNotification() {
@@ -221,12 +258,14 @@ async function loadUserProfile(user) {
             throw error;
         }
         
-        // Validate staff access — C-suite + sales CRM + legacy staff
-        const allowedRoles = (typeof STAFF_ROLES !== 'undefined')
-            ? STAFF_ROLES
-            : ['owner', 'admin', 'ceo', 'cfo', 'coo', 'cos', 'hq_readonly', 'print_operator', 'chief_of_sales', 'sales_rep'];
+        // Validate staff access — always union C-suite even if a stale roles.js loaded
+        const fallbackStaff = ['owner', 'admin', 'ceo', 'cfo', 'coo', 'cos', 'hq_readonly', 'print_operator', 'chief_of_sales', 'sales_rep'];
+        const fromRolesJs = (typeof STAFF_ROLES !== 'undefined' && Array.isArray(STAFF_ROLES)) ? STAFF_ROLES : [];
+        const allowedRoles = Array.from(new Set([...fallbackStaff, ...fromRolesJs]));
         if (!allowedRoles.includes(profile.role)) {
-            await denyStaffAccess('Access denied. This admin panel is for staff only. You have been signed out.');
+            await denyStaffAccess(
+                `Access denied for role "${profile.role}". This admin panel is for staff only. You have been signed out.`
+            );
             return;
         }
         

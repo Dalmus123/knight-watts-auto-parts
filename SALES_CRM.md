@@ -53,4 +53,4 @@ Referral links: `https://yoursite/?ref=CODE01` (also works on checkout).
 
 ## Service worker
 
-Cache bumped to `knight-watts-v1.4.0-passkeys-role-dashboards` so PWAs pick up sales assets, role desks, and passkey login.
+Cache bumped to `knight-watts-v1.4.1-ceo-login-sw-force` so PWAs force-update and stop serving stale admin allowlists.
