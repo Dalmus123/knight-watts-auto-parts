@@ -12,17 +12,47 @@ function passkeysSupported() {
 
 function getPasskeyErrorMessage(error) {
   const code = error?.code || error?.error_code || '';
-  const msg = (error?.message || String(error || '')).toLowerCase();
+  // supabase-js wraps many browser failures as "a Non-Webauthn related error…"
+  // with the real DOMException on `.cause` / `.originalError` — always prefer that.
+  const cause = error?.cause || error?.originalError || null;
+  const causeMsg = cause?.message || (typeof cause === 'string' ? cause : '');
+  const msg = (causeMsg || error?.message || String(error || '')).toLowerCase();
+  const raw = causeMsg || error?.message || 'Passkey operation failed.';
+
   if (code === 'passkey_disabled' || msg.includes('passkey_disabled')) {
     return 'Passkeys are not enabled on this Supabase project yet. Ask an admin to turn on Authentication → Passkeys.';
   }
-  if (msg.includes('not allowed') || msg.includes('abort')) {
+  if (
+    msg.includes('already pending') ||
+    msg.includes('another request') ||
+    msg.includes('operation is not allowed at this time')
+  ) {
+    return 'Another WebAuthn prompt was still open (login passkey autofill). Dismiss it or reload, then try Register passkey again.';
+  }
+  if (msg.includes('not allowed') || msg.includes('abort') || code === 'ERROR_CEREMONY_ABORTED') {
     return 'Passkey prompt was cancelled or blocked by the browser.';
   }
   if (msg.includes('excludecredentials') || code === 'webauthn_credential_exists') {
     return 'This device already has a passkey for this account.';
   }
-  return error?.message || 'Passkey operation failed.';
+  if (msg.includes('security') && msg.includes('rp')) {
+    return raw;
+  }
+  // Surface the underlying browser message when supabase-js used its generic wrapper
+  if ((error?.message || '').toLowerCase().includes('non-webauthn') && causeMsg) {
+    return causeMsg;
+  }
+  return raw;
+}
+
+/** Cancel Conditional UI / any in-flight login passkey ceremony before create() or leaving login. */
+function abortPasskeyConditionalUI(reason) {
+  if (passkeyConditionalAbort) {
+    try {
+      passkeyConditionalAbort.abort(reason || 'abort-passkey-conditional-ui');
+    } catch (_) { /* ignore */ }
+    passkeyConditionalAbort = null;
+  }
 }
 
 /**
@@ -32,12 +62,24 @@ function getPasskeyErrorMessage(error) {
 async function startPasskeyConditionalUI(supabase, onSuccess, onError) {
   if (!supabase?.auth?.signInWithPasskey || !passkeysSupported()) return;
 
+  // Only start Conditional UI when the login form is actually visible
+  const loginScreen = document.getElementById('loginScreen');
+  if (loginScreen && loginScreen.style.display === 'none') return;
+
   try {
-    if (passkeyConditionalAbort) {
-      try { passkeyConditionalAbort.abort(); } catch (_) { /* ignore */ }
+    if (typeof PublicKeyCredential !== 'undefined' &&
+        typeof PublicKeyCredential.isConditionalMediationAvailable === 'function') {
+      const ok = await PublicKeyCredential.isConditionalMediationAvailable();
+      if (!ok) return;
     }
+
+    abortPasskeyConditionalUI('restart-conditional-ui');
     passkeyConditionalAbort = new AbortController();
 
+    // IMPORTANT: pass our AbortSignal so we can cancel before registerPasskey().
+    // supabase-js registerPasskey uses a separate abort service and will NOT cancel
+    // this ceremony unless we abort this signal ourselves — concurrent get()+create()
+    // is what produces the opaque "Non-Webauthn related error has occurred".
     const { data, error } = await supabase.auth.signInWithPasskey({
       options: {
         mediation: 'conditional',
@@ -46,11 +88,12 @@ async function startPasskeyConditionalUI(supabase, onSuccess, onError) {
     });
 
     if (error) {
-      // Conditional UI often aborts when user picks password instead — ignore quietly
+      // Conditional UI often aborts when user picks password / we cancel for register
       const quiet =
         error.name === 'AbortError' ||
-        (error.message || '').includes('abort') ||
-        error.code === 'ERROR_CEREMONY_ABORTED';
+        (error.message || '').toLowerCase().includes('abort') ||
+        error.code === 'ERROR_CEREMONY_ABORTED' ||
+        (error.cause && String(error.cause.message || error.cause).toLowerCase().includes('abort'));
       if (!quiet && onError) onError(error);
       return;
     }
@@ -77,8 +120,19 @@ async function registerPasskey(supabase) {
   if (!supabase?.auth?.registerPasskey) {
     throw new Error('Passkey registration unavailable. Enable Passkeys in the Supabase dashboard and use supabase-js ≥ 2.105.');
   }
+  // Cancel login Conditional UI first — browsers reject concurrent WebAuthn ceremonies
+  abortPasskeyConditionalUI('before-register-passkey');
   const { data, error } = await supabase.auth.registerPasskey();
-  if (error) throw error;
+  if (error) {
+    // Help debug in DevTools: cause holds the real DOMException from credentials.create()
+    console.warn('[passkeys] registerPasskey failed', {
+      message: error.message,
+      code: error.code || error.error_code,
+      cause: error.cause || error.originalError || null,
+      error
+    });
+    throw error;
+  }
   return data;
 }
 
@@ -247,6 +301,7 @@ function wirePasskeyLoginUI(opts) {
 
 window.passkeysSupported = passkeysSupported;
 window.getPasskeyErrorMessage = getPasskeyErrorMessage;
+window.abortPasskeyConditionalUI = abortPasskeyConditionalUI;
 window.startPasskeyConditionalUI = startPasskeyConditionalUI;
 window.signInWithPasskeyExplicit = signInWithPasskeyExplicit;
 window.registerPasskey = registerPasskey;

@@ -87,9 +87,9 @@ async function finPayrollEmployees(panel, ctx) {
     </div>`;
 
   const { data, error } = await supabaseClient
-    .from('fin_payroll_employees')
-    .select('id, employee_code, display_name, status, base_pay')
-    .order('employee_code')
+    .from('fin_employees')
+    .select('id, employee_no, display_name, is_active, basic_salary')
+    .order('employee_no')
     .limit(200);
 
   const tbody = document.getElementById('finPayrollEmpTbody');
@@ -101,11 +101,11 @@ async function finPayrollEmployees(panel, ctx) {
   tbody.innerHTML = data
     .map(
       (e) => `
-    <tr data-search="${finPayrollEscape(`${e.employee_code} ${e.display_name}`.toLowerCase())}">
-      <td>${finPayrollEscape(e.employee_code)}</td>
+    <tr data-search="${finPayrollEscape(`${e.employee_no} ${e.display_name}`.toLowerCase())}">
+      <td>${finPayrollEscape(e.employee_no)}</td>
       <td>${finPayrollEscape(e.display_name)}</td>
-      <td><span class="fin-badge ${e.status === 'active' ? 'posted' : 'draft'}">${finPayrollEscape(e.status)}</span></td>
-      <td class="num">${formatCurrency(e.base_pay)}</td>
+      <td><span class="fin-badge ${e.is_active ? 'posted' : 'draft'}">${e.is_active ? 'active' : 'inactive'}</span></td>
+      <td class="num">${formatCurrency(e.basic_salary)}</td>
     </tr>`
     )
     .join('');
@@ -174,9 +174,9 @@ async function finPayrollPayslips(panel, ctx) {
     </div>`;
 
   const { data, error } = await supabaseClient
-    .from('fin_payroll_payslips')
-    .select('id, run_id, employee_code, net_pay, period_code')
-    .order('period_code', { ascending: false })
+    .from('fin_payslips')
+    .select('id, payroll_run_id, net_pay, employee_id, fin_employees(employee_no, display_name), fin_payroll_runs(run_ref)')
+    .order('id', { ascending: false })
     .limit(100);
 
   const tbody = document.getElementById('finPayrollSlipTbody');
@@ -189,8 +189,8 @@ async function finPayrollPayslips(panel, ctx) {
     .map(
       (s) => `
     <tr>
-      <td>${finPayrollEscape(s.period_code)}</td>
-      <td>${finPayrollEscape(s.employee_code)}</td>
+      <td>${finPayrollEscape(s.fin_payroll_runs?.run_ref || s.payroll_run_id?.slice?.(0, 8) || '—')}</td>
+      <td>${finPayrollEscape(s.fin_employees?.display_name || s.fin_employees?.employee_no || '—')}</td>
       <td class="num">${formatCurrency(s.net_pay)}</td>
       <td><button type="button" class="btn btn-outline" onclick="finPayrollViewSlip('${s.id}')">View</button></td>
     </tr>`

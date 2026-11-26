@@ -49,27 +49,73 @@ function finShowReadOnlyBadge() {
   return role === 'ceo' || role === 'owner';
 }
 
+/** True when finance migrations have been applied (fin_* tables exist). */
+async function finIsLedgerReady() {
+  if (!supabaseClient) return false;
+  try {
+    const { error } = await supabaseClient.from('fin_entities').select('id').limit(1);
+    if (!error) return true;
+    const blob = `${error.code || ''} ${error.message || ''} ${error.details || ''}`;
+    if (/42P01|PGRST205|PGRST204|does not exist|schema cache|Could not find the table/i.test(blob)) {
+      return false;
+    }
+    // Table exists but RLS/permission denied — treat as ready (empty UI is fine)
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+window.finIsLedgerReady = finIsLedgerReady;
+
+function finNotSetUpHtml() {
+  return `
+    <div class="fin-banner warn" role="status">
+      <strong>Finance not set up yet.</strong>
+      Ledger tables and report RPCs are waiting for the finance migrations to be applied.
+      The rest of the admin portal is unaffected — open Products, Orders, or Security as usual.
+    </div>
+    <div class="fin-empty" style="padding:24px 8px;">
+      <p>No trial balance, journals, or bank feeds until Dalmus applies the <code>fin_*</code> migrations.</p>
+    </div>`;
+}
+
 /** Resolve RPC scope params from entity switcher code (SHOP, PARENT, consolidated). */
 async function finResolveScope(entityCode) {
   const code = entityCode || getFinEntity();
-  if (code === 'consolidated') {
-    const { data: settings } = await supabaseClient
-      .from('fin_settings')
-      .select('default_group_id')
-      .eq('id', 1)
+  try {
+    if (code === 'consolidated') {
+      const { data: settings, error } = await supabaseClient
+        .from('fin_settings')
+        .select('default_group_id')
+        .eq('id', 1)
+        .maybeSingle();
+      if (error) throw error;
+      return {
+        p_scope: 'consolidated',
+        p_entity_id: null,
+        p_group_id: settings?.default_group_id || null
+      };
+    }
+    const { data: ent, error } = await supabaseClient
+      .from('fin_entities')
+      .select('id')
+      .eq('code', code)
       .maybeSingle();
+    if (error) throw error;
     return {
-      p_scope: 'consolidated',
+      p_scope: 'entity',
+      p_entity_id: ent?.id || null,
+      p_group_id: null
+    };
+  } catch (_) {
+    return {
+      p_scope: code === 'consolidated' ? 'consolidated' : 'entity',
       p_entity_id: null,
-      p_group_id: settings?.default_group_id || null
+      p_group_id: null,
+      unavailable: true
     };
   }
-  const { data: ent } = await supabaseClient.from('fin_entities').select('id').eq('code', code).maybeSingle();
-  return {
-    p_scope: 'entity',
-    p_entity_id: ent?.id || null,
-    p_group_id: null
-  };
 }
 
 window.finResolveScope = finResolveScope;
@@ -189,6 +235,18 @@ async function loadFinancePage(page) {
   const content = document.getElementById('contentArea');
   if (!content) return;
 
+  try {
+    await loadFinancePageInner(page, content);
+  } catch (err) {
+    console.warn('Finance page error', err);
+    content.innerHTML = `
+      <div class="fin-workspace">
+        ${finNotSetUpHtml()}
+      </div>`;
+  }
+}
+
+async function loadFinancePageInner(page, content) {
   const ctx = parseFinanceRoute(page || 'finance');
   setFinEntity(ctx.entity);
   window.__finCtx = ctx;
@@ -200,6 +258,13 @@ async function loadFinancePage(page) {
   if (!root) return;
 
   finUnsubscribeJournalRealtime();
+
+  const ready = await finIsLedgerReady();
+  if (!ready) {
+    root.innerHTML = finNotSetUpHtml();
+    finApplyWriteVisibility(content);
+    return;
+  }
 
   switch (ctx.section) {
     case 'overview':
@@ -401,11 +466,17 @@ async function finOverviewLoadTiles(ctx) {
     /* optional */
   }
 
-  const { count } = await supabaseClient
-    .from('fin_journal_entries')
-    .select('id', { count: 'exact', head: true })
-    .eq('status', 'draft');
-  if (count != null) document.getElementById('finTileDraftJournals').textContent = String(count);
+  try {
+    const { count, error } = await supabaseClient
+      .from('fin_journal_entries')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'draft');
+    if (!error && count != null) {
+      document.getElementById('finTileDraftJournals').textContent = String(count);
+    }
+  } catch (_) {
+    /* table may be missing pre-migration */
+  }
 }
 
 async function finOverviewAdvisory(ctx) {
@@ -525,17 +596,21 @@ async function finOverviewRecentJournals(ctx) {
 
 function finSubscribeJournalRealtime(ctx) {
   if (!supabaseClient?.channel) return;
-  finJournalRealtime = supabaseClient
-    .channel(`fin-journal-${ctx.entity}`)
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'fin_journal_entries' },
-      () => {
-        finOverviewRecentJournals(ctx);
-        finOverviewLoadTiles(ctx);
-      }
-    )
-    .subscribe();
+  try {
+    finJournalRealtime = supabaseClient
+      .channel(`fin-journal-${ctx.entity}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'fin_journal_entries' },
+        () => {
+          finOverviewRecentJournals(ctx).catch(() => {});
+          finOverviewLoadTiles(ctx).catch(() => {});
+        }
+      )
+      .subscribe();
+  } catch (_) {
+    /* realtime optional when ledger not published */
+  }
 }
 
 function finUnsubscribeJournalRealtime() {

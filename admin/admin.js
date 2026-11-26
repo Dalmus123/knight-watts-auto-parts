@@ -84,7 +84,7 @@ function setupPasskeyLogin() {
 }
 
 // Service Worker Update Handling — force new versions (stale admin.js omitted ceo/cfo/coo/cos)
-const EXPECTED_SW_CACHE = 'knight-watts-v1.4.3-custom-domain';
+const EXPECTED_SW_CACHE = 'knight-watts-v1.5.1-finance';
 let swForceReloading = false;
 
 function forceAppReload(reason) {
@@ -306,6 +306,11 @@ function showAdminPanel() {
             showMustChangePasswordScreen(currentUserProfile);
         }
         return;
+    }
+
+    // Stop login Conditional UI so Security → Register passkey is not blocked by a pending get()
+    if (typeof abortPasskeyConditionalUI === 'function') {
+        abortPasskeyConditionalUI('show-admin-panel');
     }
 
     document.getElementById('loginScreen').style.display = 'none';
@@ -547,11 +552,20 @@ async function loadPage(page) {
             await loadReports();
             break;
         case 'finance':
-            if (typeof loadFinancePage === 'function') {
-                await loadFinancePage(page);
-            } else {
-                contentArea.innerHTML =
-                    '<div class="empty-state"><h3>Finance module failed to load</h3></div>';
+            try {
+                if (typeof loadFinancePage === 'function') {
+                    await loadFinancePage(page);
+                } else {
+                    contentArea.innerHTML =
+                        '<div class="empty-state"><h3>Finance module failed to load</h3></div>';
+                }
+            } catch (finErr) {
+                console.warn('Finance page unavailable', finErr);
+                contentArea.innerHTML = `
+                    <div class="empty-state">
+                      <h3>Finance not set up yet</h3>
+                      <p>The ledger schema has not been applied. Other admin pages still work as usual.</p>
+                    </div>`;
             }
             break;
         case 'users':
