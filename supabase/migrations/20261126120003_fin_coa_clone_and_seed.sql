@@ -48,6 +48,20 @@ $$;
 REVOKE ALL ON FUNCTION public.fin_clone_coa(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.fin_clone_coa(uuid) TO authenticated;
 
+-- Supplement template rows for finance P&L band 7011-7049 (7010-7050 range)
+INSERT INTO public.fin_coa_template (code, name, account_type, normal_balance, fs_statement, fs_line, applies_to)
+SELECT
+  lpad(x::text, 4, '0'),
+  'Finance line ' || x,
+  CASE WHEN x = 7020 THEN 'income'::public.fin_account_type ELSE 'expense'::public.fin_account_type END,
+  CASE WHEN x = 7020 THEN 'credit' ELSE 'debit' END,
+  'income_statement',
+  'finance',
+  ARRAY['all']::text[]
+FROM generate_series(7011, 7049) AS x
+WHERE x NOT IN (7020, 7030, 7040) -- already seeded in core migration as named lines
+ON CONFLICT (code) DO NOTHING;
+
 -- Seed entity charts (PARENT, SHOP, ELIM)
 DO $$
 DECLARE
