@@ -13,8 +13,23 @@ const FIN_REPORT_TYPES = [
   { id: 'notes', label: 'Notes' },
   { id: 'ar-aged', label: 'Aged AR' },
   { id: 'ap-aged', label: 'Aged AP' },
+  { id: 'ratios', label: 'Ratios' },
   { id: 'worksheet', label: 'Consol. worksheet', consolidatedOnly: true }
 ];
+
+const FIN_REPORT_RPC = {
+  tb: 'fin_report_tb',
+  gl: 'fin_report_gl',
+  sci: 'fin_report_sci',
+  sofp: 'fin_report_sofp',
+  cf: 'fin_report_cf',
+  equity: 'fin_report_equity',
+  notes: 'fin_report_notes',
+  'ar-aged': 'fin_report_aged_ar',
+  'ap-aged': 'fin_report_aged_ap',
+  worksheet: 'fin_report_worksheet',
+  ratios: 'fin_report_ratios'
+};
 
 function finReportsEscape(s) {
   return String(s ?? '')
@@ -22,6 +37,89 @@ function finReportsEscape(s) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+async function finReportsScopeParams(entityCode) {
+  if (typeof finResolveScope === 'function') {
+    return finResolveScope(entityCode);
+  }
+  return { p_scope: 'entity', p_entity_id: null, p_group_id: null };
+}
+
+async function finReportsPeriodBounds(periodId) {
+  if (!periodId) {
+    const to = new Date().toISOString().slice(0, 10);
+    return { p_from: null, p_to: to };
+  }
+  const { data } = await supabaseClient
+    .from('fin_periods')
+    .select('starts_on, ends_on')
+    .eq('id', periodId)
+    .maybeSingle();
+  return { p_from: data?.starts_on || null, p_to: data?.ends_on || null };
+}
+
+function finReportsNormalizeRows(reportId, payload) {
+  if (!payload || typeof payload !== 'object') return [];
+  const lines = payload.lines;
+  if (Array.isArray(lines)) {
+    return lines.map((row) => ({
+      account_code: row.code ?? row.account_code,
+      account_name: row.name ?? row.account_name,
+      line_label: row.line_label ?? row.fs_line ?? row.name ?? row.code,
+      debit: row.debit,
+      credit: row.credit,
+      balance: row.balance,
+      amount: row.amount ?? row.balance,
+      component: row.component ?? row.line_label,
+      note_ref: row.note_ref,
+      title: row.title,
+      body: row.body,
+      doc_no: row.invoice_no ?? row.bill_no ?? row.doc_no,
+      due_date: row.due_date,
+      status: row.status,
+      bucket: row.bucket,
+      entity_amount: row.entity_amount,
+      elim_amount: row.elim_amount,
+      group_amount: row.group_amount ?? row.total,
+      name: row.name,
+      value: row.value
+    }));
+  }
+  if (reportId === 'notes' && Array.isArray(payload.sections)) {
+    return payload.sections.map((s) => ({
+      note_ref: s.ref ?? s.note_ref,
+      title: s.title,
+      body: s.summary ?? s.body
+    }));
+  }
+  if ((reportId === 'ar-aged' || reportId === 'ap-aged') && Array.isArray(payload.buckets)) {
+    return payload.buckets.flatMap((b) =>
+      (b.items || []).map((it) => ({
+        doc_no: it.invoice_no ?? it.bill_no ?? it.doc_no,
+        due_date: it.due_date,
+        status: it.status,
+        balance: it.balance ?? it.total ?? it.amount,
+        bucket: b.bucket ?? b.label
+      }))
+    );
+  }
+  if (reportId === 'ratios' && Array.isArray(payload.metrics)) {
+    return payload.metrics.map((m) => ({
+      line_label: m.name ?? m.code,
+      amount: m.value ?? m.amount
+    }));
+  }
+  if (reportId === 'worksheet' && Array.isArray(payload.rows)) {
+    return payload.rows.map((r) => ({
+      account_code: r.account_code ?? r.code,
+      entity_amount: r.entity_amount ?? r.shop,
+      elim_amount: r.elim_amount ?? r.elim,
+      group_amount: r.group_amount ?? r.total
+    }));
+  }
+  if (Array.isArray(payload)) return payload;
+  return [];
 }
 
 async function loadFinanceReportsSection(container, ctx) {
@@ -123,22 +221,25 @@ async function finReportsRefresh() {
 }
 
 async function finReportsFetch(reportId, opts) {
-  const rpcMap = {
-    tb: 'fin_report_tb',
-    sci: 'fin_report_sci',
-    sofp: 'fin_report_sofp',
-    cf: 'fin_report_cf'
-  };
+  const rpc = FIN_REPORT_RPC[reportId];
+  const scope = await finReportsScopeParams(opts.entity);
+  const { p_from, p_to } = await finReportsPeriodBounds(opts.periodId);
+  const segment = opts.segment || null;
 
-  const rpc = rpcMap[reportId];
   if (rpc) {
     try {
       const { data, error } = await supabaseClient.rpc(rpc, {
-        p_entity: opts.entity,
-        p_period_id: opts.periodId,
-        p_segment: opts.segment
+        p_scope: scope.p_scope,
+        p_entity_id: scope.p_entity_id,
+        p_group_id: scope.p_group_id,
+        p_from,
+        p_to,
+        p_segment: segment
       });
-      if (!error && Array.isArray(data)) return data;
+      if (!error && data) {
+        const rows = finReportsNormalizeRows(reportId, data);
+        if (rows.length) return rows;
+      }
     } catch (_) {
       /* schema may not be deployed */
     }
@@ -147,29 +248,54 @@ async function finReportsFetch(reportId, opts) {
   if (reportId === 'gl') {
     const { data, error } = await supabaseClient
       .from('fin_journal_lines')
-      .select('id, account_code, description, debit, credit, posted_at, entry_id')
-      .order('posted_at', { ascending: false })
+      .select('id, line_no, debit, credit, description, entry_id, fin_accounts(code)')
+      .order('line_no', { ascending: false })
       .limit(200);
     if (!error && data?.length) {
       return data.map((r) => ({
-        account_code: r.account_code,
+        account_code: r.fin_accounts?.code,
         description: r.description,
         debit: r.debit,
         credit: r.credit,
-        date: r.posted_at,
         entry_id: r.entry_id
       }));
     }
   }
 
-  if (reportId === 'ar-aged' || reportId === 'ap-aged') {
-    const table = reportId === 'ar-aged' ? 'fin_ar_invoices' : 'fin_ap_bills';
-    const { data, error } = await supabaseClient
-      .from(table)
-      .select('id, doc_no, due_date, status, balance')
+  if (reportId === 'ar-aged') {
+    let query = supabaseClient
+      .from('fin_invoices')
+      .select('id, invoice_no, due_date, status, total')
       .order('due_date', { ascending: true })
       .limit(100);
-    if (!error && data?.length) return data;
+    if (scope.p_entity_id) query = query.eq('entity_id', scope.p_entity_id);
+    const { data, error } = await query;
+    if (!error && data?.length) {
+      return data.map((r) => ({
+        doc_no: r.invoice_no,
+        due_date: r.due_date,
+        status: r.status,
+        balance: r.total
+      }));
+    }
+  }
+
+  if (reportId === 'ap-aged') {
+    let query = supabaseClient
+      .from('fin_bills')
+      .select('id, bill_no, due_date, status, total')
+      .order('due_date', { ascending: true })
+      .limit(100);
+    if (scope.p_entity_id) query = query.eq('entity_id', scope.p_entity_id);
+    const { data, error } = await query;
+    if (!error && data?.length) {
+      return data.map((r) => ({
+        doc_no: r.bill_no,
+        due_date: r.due_date,
+        status: r.status,
+        balance: r.total
+      }));
+    }
   }
 
   return [];
@@ -205,12 +331,12 @@ function finReportsHeaders(reportId) {
     { key: 'account_code', label: 'Account' },
     { key: 'account_name', label: 'Name' },
     { key: 'debit', label: 'Debit', num: true, fmt: 'currency' },
-    { key: 'credit', label: 'Credit', num: true, fmt: 'currency' }
+    { key: 'credit', label: 'Credit', num: true, fmt: 'currency' },
+    { key: 'balance', label: 'Balance', num: true, fmt: 'currency' }
   ];
   const map = {
     tb,
     gl: [
-      { key: 'date', label: 'Date', fmt: 'date' },
       { key: 'account_code', label: 'Account' },
       { key: 'description', label: 'Memo' },
       { key: 'debit', label: 'Debit', num: true, fmt: 'currency' },
@@ -238,17 +364,23 @@ function finReportsHeaders(reportId) {
       { key: 'title', label: 'Title' },
       { key: 'body', label: 'Summary' }
     ],
+    ratios: [
+      { key: 'line_label', label: 'Metric' },
+      { key: 'amount', label: 'Value', num: true }
+    ],
     'ar-aged': [
-      { key: 'doc_no', label: 'Doc' },
+      { key: 'doc_no', label: 'Invoice' },
       { key: 'due_date', label: 'Due', fmt: 'date' },
       { key: 'status', label: 'Status' },
-      { key: 'balance', label: 'Balance', num: true, fmt: 'currency' }
+      { key: 'balance', label: 'Balance', num: true, fmt: 'currency' },
+      { key: 'bucket', label: 'Bucket' }
     ],
     'ap-aged': [
-      { key: 'doc_no', label: 'Doc' },
+      { key: 'doc_no', label: 'Bill' },
       { key: 'due_date', label: 'Due', fmt: 'date' },
       { key: 'status', label: 'Status' },
-      { key: 'balance', label: 'Balance', num: true, fmt: 'currency' }
+      { key: 'balance', label: 'Balance', num: true, fmt: 'currency' },
+      { key: 'bucket', label: 'Bucket' }
     ],
     worksheet: [
       { key: 'account_code', label: 'Account' },

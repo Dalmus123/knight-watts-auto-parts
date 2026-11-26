@@ -41,13 +41,38 @@ function finEscapeHtml(str) {
 
 function finCanWrite() {
   const role = typeof getCurrentRole === 'function' ? getCurrentRole() : currentUserProfile?.role;
-  return role === 'cfo' || role === 'owner';
+  return role === 'cfo';
 }
 
 function finShowReadOnlyBadge() {
   const role = typeof getCurrentRole === 'function' ? getCurrentRole() : currentUserProfile?.role;
-  return role === 'ceo';
+  return role === 'ceo' || role === 'owner';
 }
+
+/** Resolve RPC scope params from entity switcher code (SHOP, PARENT, consolidated). */
+async function finResolveScope(entityCode) {
+  const code = entityCode || getFinEntity();
+  if (code === 'consolidated') {
+    const { data: settings } = await supabaseClient
+      .from('fin_settings')
+      .select('default_group_id')
+      .eq('id', 1)
+      .maybeSingle();
+    return {
+      p_scope: 'consolidated',
+      p_entity_id: null,
+      p_group_id: settings?.default_group_id || null
+    };
+  }
+  const { data: ent } = await supabaseClient.from('fin_entities').select('id').eq('code', code).maybeSingle();
+  return {
+    p_scope: 'entity',
+    p_entity_id: ent?.id || null,
+    p_group_id: null
+  };
+}
+
+window.finResolveScope = finResolveScope;
 
 function parseFinanceRoute(page) {
   const raw = String(page || 'finance');
@@ -202,11 +227,12 @@ async function loadFinancePage(page) {
       await finSectionTableShell(root, ctx, {
         title: 'Bank accounts',
         table: 'fin_bank_accounts',
+        kindFilter: 'bank',
         columns: [
-          { key: 'name', label: 'Name' },
+          { key: 'label', label: 'Label' },
           { key: 'kind', label: 'Kind' },
-          { key: 'currency_code', label: 'CCY' },
-          { key: 'balance', label: 'Balance', num: true, fmt: 'currency' }
+          { key: 'currency', label: 'CCY' },
+          { key: 'is_active', label: 'Active' }
         ],
         newLabel: 'Add account'
       });
@@ -214,46 +240,48 @@ async function loadFinancePage(page) {
     case 'petty-cash':
       await finSectionTableShell(root, ctx, {
         title: 'Petty cash floats',
-        table: 'fin_petty_cash_floats',
+        table: 'fin_bank_accounts',
+        kindFilter: 'petty_cash',
         columns: [
-          { key: 'code', label: 'Code' },
-          { key: 'custodian', label: 'Custodian' },
-          { key: 'balance', label: 'Balance', num: true, fmt: 'currency' }
+          { key: 'label', label: 'Float' },
+          { key: 'currency', label: 'CCY' },
+          { key: 'is_active', label: 'Active' }
         ]
       });
       break;
     case 'sales-ar':
       await finSectionTableShell(root, ctx, {
         title: 'Accounts receivable',
-        table: 'fin_ar_invoices',
+        table: 'fin_invoices',
         columns: [
-          { key: 'doc_no', label: 'Invoice' },
+          { key: 'invoice_no', label: 'Invoice' },
           { key: 'due_date', label: 'Due', fmt: 'date' },
           { key: 'status', label: 'Status', badge: true },
-          { key: 'balance', label: 'Balance', num: true, fmt: 'currency' }
+          { key: 'total', label: 'Total', num: true, fmt: 'currency' }
         ]
       });
       break;
     case 'purchases-ap':
       await finSectionTableShell(root, ctx, {
         title: 'Accounts payable',
-        table: 'fin_ap_bills',
+        table: 'fin_bills',
         columns: [
-          { key: 'doc_no', label: 'Bill' },
+          { key: 'bill_no', label: 'Bill' },
           { key: 'due_date', label: 'Due', fmt: 'date' },
           { key: 'status', label: 'Status', badge: true },
-          { key: 'balance', label: 'Balance', num: true, fmt: 'currency' }
+          { key: 'total', label: 'Total', num: true, fmt: 'currency' }
         ]
       });
       break;
     case 'subscriptions':
       await finSectionTableShell(root, ctx, {
         title: 'Subscriptions',
-        table: 'fin_subscriptions',
+        table: 'fin_recurring_templates',
         columns: [
-          { key: 'service_name', label: 'Service' },
-          { key: 'renewal_date', label: 'Renewal', fmt: 'date' },
-          { key: 'amount', label: 'Amount', num: true, fmt: 'currency' }
+          { key: 'name', label: 'Template' },
+          { key: 'cadence', label: 'Cadence' },
+          { key: 'next_run_on', label: 'Next run', fmt: 'date' },
+          { key: 'is_active', label: 'Active' }
         ]
       });
       break;
@@ -265,21 +293,12 @@ async function loadFinancePage(page) {
           { key: 'asset_code', label: 'Code' },
           { key: 'description', label: 'Description' },
           { key: 'status', label: 'Status', badge: true },
-          { key: 'nbv', label: 'NBV', num: true, fmt: 'currency' }
+          { key: 'cost', label: 'Cost', num: true, fmt: 'currency' }
         ]
       });
       break;
     case 'tax':
-      await finSectionTableShell(root, ctx, {
-        title: 'Tax returns & filings',
-        table: 'fin_tax_filings',
-        columns: [
-          { key: 'period_code', label: 'Period' },
-          { key: 'tax_type', label: 'Type' },
-          { key: 'status', label: 'Status', badge: true },
-          { key: 'amount', label: 'Amount', num: true, fmt: 'currency' }
-        ]
-      });
+      await finSectionTax(root, ctx);
       break;
     case 'journals':
       await finSectionJournals(root, ctx);
@@ -324,16 +343,62 @@ async function finSectionOverview(root, ctx) {
   finSubscribeJournalRealtime(ctx);
 }
 
+function finMtdRange() {
+  const now = new Date();
+  const from = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+  const to = now.toISOString().slice(0, 10);
+  return { from, to };
+}
+
+function finSumFsLines(lines, fsLines, useAbs = false) {
+  if (!Array.isArray(lines)) return 0;
+  const set = new Set(fsLines);
+  return lines.reduce((sum, row) => {
+    if (!set.has(row.fs_line) && !set.has(row.line_label)) return sum;
+    const amt = Number(row.amount ?? row.balance ?? 0);
+    return sum + (useAbs ? Math.abs(amt) : amt);
+  }, 0);
+}
+
 async function finOverviewLoadTiles(ctx) {
+  const scope = await finResolveScope(ctx.entity);
+  const { from, to } = finMtdRange();
+  const incomeFs = ['turnover', 'other_income', 'ic_income'];
+  const expenseFs = ['cogs', 'staff', 'opex', 'depreciation', 'finance', 'tax_expense', 'ic_purchases'];
+
   try {
-    const { data, error } = await supabaseClient.rpc('fin_insights', { p_entity: ctx.entity });
-    if (!error && data && typeof data === 'object') {
-      if (data.revenue_mtd != null) document.getElementById('finTileRevenue').textContent = formatCurrency(data.revenue_mtd);
-      if (data.expenses_mtd != null) document.getElementById('finTileExpenses').textContent = formatCurrency(data.expenses_mtd);
-      if (data.cash_position != null) document.getElementById('finTileCash').textContent = formatCurrency(data.cash_position);
+    const { data: sci, error } = await supabaseClient.rpc('fin_report_sci', {
+      ...scope,
+      p_from: from,
+      p_to: to,
+      p_segment: null
+    });
+  if (!error && sci?.lines) {
+      const rev = finSumFsLines(sci.lines, incomeFs);
+      const exp = finSumFsLines(sci.lines, expenseFs, true);
+      document.getElementById('finTileRevenue').textContent = formatCurrency(rev);
+      document.getElementById('finTileExpenses').textContent = formatCurrency(exp);
     }
   } catch (_) {
     /* RPC optional */
+  }
+
+  try {
+    const { data: tb, error } = await supabaseClient.rpc('fin_report_tb', {
+      ...(await finResolveScope(ctx.entity)),
+      p_from: null,
+      p_to: to,
+      p_segment: null
+    });
+    if (!error && tb?.lines) {
+      const cash = finSumFsLines(
+        tb.lines.filter((l) => l.fs_line === 'bank_cash'),
+        ['bank_cash']
+      );
+      document.getElementById('finTileCash').textContent = formatCurrency(Math.abs(cash));
+    }
+  } catch (_) {
+    /* optional */
   }
 
   const { count } = await supabaseClient
@@ -357,12 +422,14 @@ async function finOverviewAdvisory(ctx) {
   }
 
   try {
-    const { data } = await supabaseClient.rpc('fin_insights', { p_entity: ctx.entity });
-    if (Array.isArray(data)) {
-      data.forEach((row) => {
+    const scope = await finResolveScope(ctx.entity);
+    const { data } = await supabaseClient.rpc('fin_insights', scope);
+    const list = Array.isArray(data) ? data : data?.insights;
+    if (Array.isArray(list)) {
+      list.forEach((row) => {
         rules.push({
           severity: row.severity || 'info',
-          text: row.message || row.title || 'Insight'
+          text: row.detail || row.message || row.title || 'Insight'
         });
       });
     }
@@ -392,7 +459,8 @@ async function finOverviewHealth(ctx) {
   const body = document.getElementById('finHealthBody');
   let health = null;
   try {
-    const { data, error } = await supabaseClient.rpc('fin_data_health', { p_entity: ctx.entity });
+    const scope = await finResolveScope(ctx.entity);
+    const { data, error } = await supabaseClient.rpc('fin_data_health', scope);
     if (!error) health = data;
   } catch (_) {
     /* optional */
@@ -427,7 +495,7 @@ async function finOverviewRecentJournals(ctx) {
   const host = document.getElementById('finRecentJournals');
   const { data, error } = await supabaseClient
     .from('fin_journal_entries')
-    .select('id, entry_no, status, description, posted_at, created_at')
+    .select('id, entry_no, status, memo, posted_at, created_at')
     .order('created_at', { ascending: false })
     .limit(15);
 
@@ -446,7 +514,7 @@ async function finOverviewRecentJournals(ctx) {
           <tr>
             <td><button type="button" class="btn btn-outline" style="padding:2px 8px;font-size:12px;" onclick="finNavigate('journals','${j.id}')">${finEscapeHtml(j.entry_no || j.id.slice(0, 8))}</button></td>
             <td><span class="fin-badge ${j.status === 'posted' ? 'posted' : 'draft'}">${finEscapeHtml(j.status)}</span></td>
-            <td>${finEscapeHtml(j.description || '—')}</td>
+            <td>${finEscapeHtml(j.memo || '—')}</td>
             <td>${formatDate(j.posted_at || j.created_at)}</td>
           </tr>`
           )
@@ -484,7 +552,7 @@ async function finSectionJournals(root, ctx) {
     columns: [
       { key: 'entry_no', label: 'Entry' },
       { key: 'status', label: 'Status', badge: true },
-      { key: 'description', label: 'Memo' },
+      { key: 'memo', label: 'Memo' },
       { key: 'posted_at', label: 'Posted', fmt: 'date' }
     ],
     newLabel: 'New journal',
@@ -501,7 +569,14 @@ async function finSectionRatios(root, ctx) {
 
   let ratios = null;
   try {
-    const { data, error } = await supabaseClient.rpc('fin_ratios', { p_entity: ctx.entity });
+    const scope = await finResolveScope(ctx.entity);
+    const { from, to } = finMtdRange();
+    const { data, error } = await supabaseClient.rpc('fin_report_ratios', {
+      ...scope,
+      p_from: from,
+      p_to: to,
+      p_segment: null
+    });
     if (!error) ratios = data;
   } catch (_) {
     /* optional */
@@ -514,7 +589,12 @@ async function finSectionRatios(root, ctx) {
     return;
   }
 
-  const rows = Array.isArray(ratios) ? ratios : Object.entries(ratios).map(([k, v]) => ({ name: k, value: v }));
+  const metricRows = ratios?.metrics;
+  const rows = Array.isArray(metricRows)
+    ? metricRows.map((m) => ({ name: m.name || m.code, value: m.value ?? m.amount }))
+    : Array.isArray(ratios)
+      ? ratios
+      : Object.entries(ratios || {}).map(([k, v]) => ({ name: k, value: v }));
   body.innerHTML = `
     <table class="fin-statement-table">
       <thead><tr><th>Ratio</th><th class="num">Value</th></tr></thead>
@@ -714,11 +794,20 @@ async function finSettingsLoadIc() {
 async function finProposeEliminations() {
   if (!finCanWrite()) return;
   try {
+    const { data: settings } = await supabaseClient
+      .from('fin_settings')
+      .select('default_group_id')
+      .eq('id', 1)
+      .maybeSingle();
+    const groupId = settings?.default_group_id;
+    if (!groupId) throw new Error('No default consolidation group configured.');
     const { data, error } = await supabaseClient.rpc('fin_propose_eliminations', {
-      p_entity: getFinEntity()
+      p_group_id: groupId,
+      p_period_end: new Date().toISOString().slice(0, 10)
     });
     if (error) throw error;
-    alert(data?.message || 'Elimination proposals generated. Review in intercompany queue.');
+    const n = Array.isArray(data?.drafts) ? data.drafts.length : 0;
+    alert(data?.note || `${n} elimination draft(s) proposed (not posted).`);
     finSettingsLoadIc();
   } catch (e) {
     alert('Could not propose eliminations: ' + (e.message || 'RPC not deployed yet.'));
@@ -738,6 +827,53 @@ function finSettingsExportCoa() {
 }
 
 window.finSettingsExportCoa = finSettingsExportCoa;
+
+async function finSectionTax(root, ctx) {
+  root.innerHTML = `
+    <div class="fin-panel">
+      <div class="fin-panel-header"><h3>Tax codes</h3></div>
+      <div class="fin-panel-body fin-table-wrap" id="finTaxCodesBody"><p class="fin-empty">Loading…</p></div>
+    </div>
+    <div class="fin-panel">
+      <div class="fin-panel-header"><h3>Compliance calendar (shell)</h3></div>
+      <div class="fin-panel-body">
+        <ul style="margin:0;padding-left:18px;line-height:1.7;">
+          <li>VAT return — monthly placeholder</li>
+          <li>WHT certificates — as issued</li>
+          <li>Annual corporate filing — placeholder</li>
+        </ul>
+        <p style="margin-bottom:0;color:var(--text-muted,#666);font-size:13px;">Configure entity VAT in Settings; filings post via journals when enabled.</p>
+      </div>
+    </div>`;
+
+  const host = document.getElementById('finTaxCodesBody');
+  const { data, error } = await supabaseClient
+    .from('fin_tax_codes')
+    .select('code, name, rate_pct, is_deductible, is_withholding')
+    .order('code');
+  if (error || !data?.length) {
+    host.innerHTML = '<p class="fin-empty">No tax codes configured.</p>';
+    return;
+  }
+  host.innerHTML = `
+    <table class="fin-statement-table">
+      <thead><tr><th>Code</th><th>Name</th><th class="num">Rate %</th><th>Deductible</th><th>WHT</th></tr></thead>
+      <tbody>
+        ${data
+          .map(
+            (t) => `
+          <tr>
+            <td>${finEscapeHtml(t.code)}</td>
+            <td>${finEscapeHtml(t.name)}</td>
+            <td class="num">${finEscapeHtml(String(t.rate_pct))}</td>
+            <td>${t.is_deductible ? 'Yes' : 'No'}</td>
+            <td>${t.is_withholding ? 'Yes' : 'No'}</td>
+          </tr>`
+          )
+          .join('')}
+      </tbody>
+    </table>`;
+}
 
 async function finSectionTableShell(root, ctx, spec) {
   const tableId = `finTbl_${spec.table}`;
@@ -783,6 +919,11 @@ async function finTableReload(table, tableId) {
   if (!spec || !tbody) return;
 
   let query = supabaseClient.from(table).select('*').limit(200);
+  const scope = await finResolveScope(getFinEntity());
+  if (scope.p_entity_id && spec.entityScope !== false) {
+    query = query.eq('entity_id', scope.p_entity_id);
+  }
+  if (spec.kindFilter) query = query.eq('kind', spec.kindFilter);
   const status = document.getElementById(`${tableId}_status`)?.value;
   if (status) query = query.eq('status', status);
 
