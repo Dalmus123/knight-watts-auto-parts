@@ -227,7 +227,7 @@ async function loadFinancePage(page) {
       await finSectionTableShell(root, ctx, {
         title: 'Bank accounts',
         table: 'fin_bank_accounts',
-        kindFilter: 'bank',
+        kindFilter: 'bank,mpesa',
         columns: [
           { key: 'label', label: 'Label' },
           { key: 'kind', label: 'Kind' },
@@ -923,7 +923,10 @@ async function finTableReload(table, tableId) {
   if (scope.p_entity_id && spec.entityScope !== false) {
     query = query.eq('entity_id', scope.p_entity_id);
   }
-  if (spec.kindFilter) query = query.eq('kind', spec.kindFilter);
+  if (spec.kindFilter) {
+    const kinds = String(spec.kindFilter).split(',').map((k) => k.trim()).filter(Boolean);
+    query = kinds.length > 1 ? query.in('kind', kinds) : query.eq('kind', kinds[0]);
+  }
   const status = document.getElementById(`${tableId}_status`)?.value;
   if (status) query = query.eq('status', status);
 

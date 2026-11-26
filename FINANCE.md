@@ -50,7 +50,7 @@ flowchart LR
 | `orders` | stock decrement setting | Dr 5100, Cr 1340 — `MISSING_COST` audit only when unit cost is zero (no zero-line journal) |
 | `products` | `stock_quantity` change | Dr/Cr inventory vs expense (skip if `kw.fin_internal_stock` session flag) |
 | `print_jobs` | `printing` / `completed` | WIP/FG placeholders — extend when costing live |
-| `commission_entries` | `approved` / `paid` | Dr 6010, Cr 2030 |
+| `commission_entries` | `approved` / `paid` | Dr 6090 Cr 2150; then Dr 2150 Cr 1020 |
 | `fin_run_depreciation` | period run | Dr **6400**, Cr accum dep account **code** from asset register |
 
 Manual and subledger posts use `fin_post_entry` / subledger tables with the same idempotent `fin_source_documents` key.

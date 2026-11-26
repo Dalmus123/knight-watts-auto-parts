@@ -1028,3 +1028,70 @@ BEGIN
   RETURN jsonb_build_object('drafts', v_drafts, 'note', 'Proposals only — never auto-posted');
 END;
 $$;
+-- ---------------------------------------------------------------------------
+-- Commission posting (approved → 6090/2150; paid → 2150/bank)
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public._fin_auto_post_commission()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_shop uuid;
+  v_amt numeric(14,2);
+BEGIN
+  IF TG_OP <> 'UPDATE' THEN RETURN NEW; END IF;
+  IF NEW.status IS DISTINCT FROM OLD.status AND NEW.status = 'approved' THEN
+    v_shop := public._fin_shop_entity_id();
+    v_amt := COALESCE(NEW.commission_amount_kes, 0);
+    IF v_shop IS NULL OR v_amt <= 0 THEN RETURN NEW; END IF;
+    PERFORM public.fin_post_entry(
+      v_shop, CURRENT_DATE, 'Commission approved',
+      jsonb_build_object('source_type','commission','source_table','commission_entries','source_id',NEW.id),
+      jsonb_build_array(
+        jsonb_build_object('account_code','6090','debit',v_amt),
+        jsonb_build_object('account_code','2150','credit',v_amt)
+      ),
+      'posted'
+    );
+  ELSIF NEW.status IS DISTINCT FROM OLD.status AND NEW.status = 'paid' THEN
+    v_shop := public._fin_shop_entity_id();
+    v_amt := COALESCE(NEW.commission_amount_kes, 0);
+    IF v_shop IS NULL OR v_amt <= 0 THEN RETURN NEW; END IF;
+    PERFORM public.fin_post_entry(
+      v_shop, CURRENT_DATE, 'Commission paid',
+      jsonb_build_object('source_type','commission','source_table','commission_entries','source_id',NEW.id,
+        'doc_number', NEW.id::text || '-paid'),
+      jsonb_build_array(
+        jsonb_build_object('account_code','2150','debit',v_amt),
+        jsonb_build_object('account_code','1020','credit',v_amt)
+      ),
+      'posted'
+    );
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+-- Intercompany review queue (UI Settings → IC queue)
+CREATE TABLE IF NOT EXISTS public.fin_intercompany_queue (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  entity_id uuid NOT NULL REFERENCES public.fin_entities(id) ON DELETE CASCADE,
+  counter_entity_id uuid REFERENCES public.fin_entities(id),
+  ic_link_id uuid,
+  status text NOT NULL DEFAULT 'open',
+  memo text,
+  amount numeric(14,2),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.fin_intercompany_queue ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS fin_read ON public.fin_intercompany_queue;
+DROP POLICY IF EXISTS fin_write ON public.fin_intercompany_queue;
+CREATE POLICY fin_read ON public.fin_intercompany_queue FOR SELECT TO authenticated
+  USING (public.fin_can_read());
+CREATE POLICY fin_write ON public.fin_intercompany_queue FOR ALL TO authenticated
+  USING (public.fin_can_write()) WITH CHECK (public.fin_can_write());
+REVOKE ALL ON public.fin_intercompany_queue FROM anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.fin_intercompany_queue TO authenticated;

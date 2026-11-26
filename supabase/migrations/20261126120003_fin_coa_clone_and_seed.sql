@@ -48,20 +48,6 @@ $$;
 REVOKE ALL ON FUNCTION public.fin_clone_coa(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.fin_clone_coa(uuid) TO authenticated;
 
--- Supplement template rows for finance P&L band 7011-7049 (7010-7050 range)
-INSERT INTO public.fin_coa_template (code, name, account_type, normal_balance, fs_statement, fs_line, applies_to)
-SELECT
-  lpad(x::text, 4, '0'),
-  'Finance line ' || x,
-  CASE WHEN x = 7020 THEN 'income'::public.fin_account_type ELSE 'expense'::public.fin_account_type END,
-  CASE WHEN x = 7020 THEN 'credit' ELSE 'debit' END,
-  'income_statement',
-  'finance',
-  ARRAY['all']::text[]
-FROM generate_series(7011, 7049) AS x
-WHERE x NOT IN (7020, 7030, 7040) -- already seeded in core migration as named lines
-ON CONFLICT (code) DO NOTHING;
-
 -- Seed entity charts (PARENT, SHOP, ELIM)
 DO $$
 DECLARE
@@ -112,12 +98,16 @@ VALUES
     '2024-01-01',
     '{"bands":[{"up_to":24000,"rate_pct":10},{"up_to":32333,"rate_pct":25},{"up_to":500000,"rate_pct":30},{"up_to":800000,"rate_pct":32.5},{"up_to":null,"rate_pct":35}],"personal_relief_monthly":2400}'::jsonb
   ),
-  ('nssf', '2024-01-01', '{"tier1_limit":7000,"tier1_rate_pct":6,"tier2_limit":36000,"tier2_rate_pct":6}'::jsonb),
-  ('shif', '2024-10-01', '{"rate_pct":2.75,"minimum_contribution":300}'::jsonb),
+  -- NSSF from Feb 2026: 6%+6%; LEL 9,000 (Tier I cap 540); UEL 108,000 (Tier II cap 5,940); combined cap 6,480
+  ('nssf', '2026-02-01', '{"lel":9000,"uel":108000,"employee_rate_pct":6,"employer_rate_pct":6,"tier1_cap_each":540,"tier2_cap_each":5940,"combined_cap_each":6480}'::jsonb),
+  ('shif', '2024-10-01', '{"rate_pct":2.75,"minimum_contribution":300,"employee_only":true}'::jsonb),
   ('housing_levy', '2024-01-01', '{"employee_rate_pct":1.5,"employer_rate_pct":1.5}'::jsonb),
-  ('nita', '2024-01-01', '{"levy_per_employee_monthly":50}'::jsonb),
+  ('nita', '2024-01-01', '{"levy_per_employee_monthly":50,"employer_only":true}'::jsonb),
   ('corp_tax', '2024-01-01', '{"rate_pct":30}'::jsonb),
-  ('personal_relief', '2024-01-01', '{"monthly_amount":2400}'::jsonb)
+  ('personal_relief', '2024-01-01', '{"monthly_amount":2400}'::jsonb),
+  ('capital_allowances', '2024-01-01', '{"class_I":37.5,"class_II":30,"class_III":25,"class_IV":12.5}'::jsonb),
+  ('vat_threshold', '2024-01-01', '{"rolling_turnover_advisory":5000000,"note":"Confirm current Finance Act threshold with a tax adviser"}'::jsonb),
+  ('tax_instalments', '2024-01-01', '{"months":[4,6,9,12],"count":4,"balance_month_following_year":4}'::jsonb)
 ON CONFLICT (rate_key, effective_from) DO UPDATE SET payload = EXCLUDED.payload;
 
 CREATE TABLE IF NOT EXISTS public.fin_seed_expected (
