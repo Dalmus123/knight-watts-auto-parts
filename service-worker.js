@@ -5,7 +5,7 @@
 // IMPORTANT: bump CACHE_NAME on every admin auth / role change so iPhone PWAs
 // drop stale admin.js (old allowlists that rejected ceo/cfo/coo/cos).
 
-const CACHE_NAME = 'knight-watts-v1.4.3-custom-domain';
+const CACHE_NAME = 'knight-watts-v1.4.4-passkey-abort';
 const OFFLINE_PATH = '/offline.html';
 
 // Site root from SW script directory — works for:
