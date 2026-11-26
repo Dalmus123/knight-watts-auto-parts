@@ -3,7 +3,8 @@ const fs = require('fs');
 const path = require('path');
 
 const PORT = 8080;
-const BASE_PATH = '/knight-watts-auto-parts';
+// Mimic GitHub Pages project URL locally. Custom domain serves from '/' instead.
+const BASE_PATH = process.env.KW_BASE_PATH || '/knight-watts-auto-parts';
 
 const mimeTypes = {
   '.html': 'text/html',

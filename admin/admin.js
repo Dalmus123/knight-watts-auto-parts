@@ -84,7 +84,7 @@ function setupPasskeyLogin() {
 }
 
 // Service Worker Update Handling — force new versions (stale admin.js omitted ceo/cfo/coo/cos)
-const EXPECTED_SW_CACHE = 'knight-watts-v1.4.2-add-staff';
+const EXPECTED_SW_CACHE = 'knight-watts-v1.4.3-custom-domain';
 let swForceReloading = false;
 
 function forceAppReload(reason) {
@@ -109,7 +109,10 @@ function setupServiceWorkerUpdate() {
         }
     });
 
-    navigator.serviceWorker.register('../service-worker.js').then((registration) => {
+    // Scope = site root (custom domain / or /knight-watts-auto-parts/)
+    const swUrl = new URL('../service-worker.js', window.location.href);
+    const swScope = new URL('../', window.location.href);
+    navigator.serviceWorker.register(swUrl.href, { scope: swScope.pathname }).then((registration) => {
         const activateWaiting = () => {
             if (registration.waiting) {
                 registration.waiting.postMessage({ type: 'SKIP_WAITING' });

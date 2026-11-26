@@ -118,7 +118,9 @@ async function loadSecurityPasskeysPage() {
       <div id="passkeysList"><div class="empty-state"><p>Loading…</p></div></div>
       <p class="role-dash-hint" style="padding: 12px 16px;">
         On Mac: Safari uses iCloud Keychain. Chrome needs the iCloud Passwords extension or its own passkey store.
-        Dashboard: Authentication → Passkeys must be enabled (RP ID <code>dalmus123.github.io</code> for GitHub Pages).
+        Dashboard: Authentication → Passkeys must be enabled
+        (RP ID <code id="passkeyRpIdHint">${typeof KWSite !== 'undefined' ? KWSite.passkeyRpId() : (location.hostname || 'knightwatts.co.ke')}</code>).
+        Existing passkeys are bound to one RP ID — re-register after moving to <code>knightwatts.co.ke</code>.
       </p>
     </div>
   `;

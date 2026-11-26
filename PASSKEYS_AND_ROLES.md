@@ -2,28 +2,42 @@
 
 Admin portal auth (Face ID / Touch ID passkeys) and C-suite / sales role desks for Knight Watts Auto Parts.
 
-**Migrations in this PR are NOT applied to the live project yet.** Apply on merge (project `selvxrprxbkznxtfesxe`).
+**Canonical public site:** `https://knightwatts.co.ke` (apex).  
+**Legacy GitHub Pages URL (still valid during DNS switchover):** `https://dalmus123.github.io/knight-watts-auto-parts/`
 
-## Migrations to apply on merge
+## Custom domain & passkeys (Nov 2026)
 
-1. `supabase/migrations/20261125190000_csuite_roles_enums.sql` — enum values `ceo`, `cfo`, `coo`, `cos`
-2. `supabase/migrations/20261125190001_csuite_roles_rls.sql` — helpers, RLS expansions, finance/ops RPCs, email seed helper
+| Field | Value |
+|-------|--------|
+| Relying Party Display Name | `Knight Watts Admin` |
+| Relying Party ID | `knightwatts.co.ke` (no scheme/path; **not** `www.`) |
+| Relying Party Origins | `https://knightwatts.co.ke` and `https://www.knightwatts.co.ke` |
 
-Then (optional, when Auth users exist):
+### Important: re-register passkeys
 
-```sql
-SELECT * FROM seed_csuite_roles_by_email();
-```
+WebAuthn credentials are bound to a single **RP ID**. Passkeys created while the RP ID was `dalmus123.github.io` **will not work** on `knightwatts.co.ke`. After the domain cutover:
+
+1. Set Supabase Passkeys RP ID to `knightwatts.co.ke` (and add the origins above).
+2. Sign in with **password** on `https://knightwatts.co.ke/admin/`.
+3. Open **Security → Register passkey** again on each device.
+
+During DNS switchover you may keep the old github.io origin in Auth redirect allowlists for password/OAuth, but passkeys only work for the RP ID that matches the hostname the browser is on.
+
+## Migrations (historical — already applied on live)
+
+1. `supabase/migrations/20261125190000_csuite_roles_enums.sql`
+2. `supabase/migrations/20261125190001_csuite_roles_rls.sql`
+3. Staff mgmt / `must_change_password`: `20261125210000_staff_mgmt_rls.sql`
+
+Seed helper (optional): `SELECT * FROM seed_csuite_roles_by_email();` — does not create Auth users; does not change roles that were already set.
 
 | Email | Role | Notes |
 |-------|------|--------|
 | escrivanyagah5@gmail.com | `ceo` | Full company desk |
-| dkinyua971@gmail.com | `cfo` | Finance |
+| dkinyua971@gmail.com | `cfo` | Finance (user-set — do not overwrite) |
 | eliudmugo07@gmail.com | `coo` | Operations |
 | ldayanti719@gmail.com | `cos` | Chief of Staff (sales leadership) |
 | sales001@knightwatts.co.ke | `sales_rep` | Own telemetry only |
-
-The helper **does not create Auth users**. Missing emails are reported as `skipped_no_auth_user`.
 
 ## Passkey setup (dashboard + client)
 
@@ -34,25 +48,20 @@ Supabase native passkeys (WebAuthn), experimental API — **not** MFA TOTP.
 1. Open project **selvxrprxbkznxtfesxe**
 2. **Authentication → Passkeys**
 3. Turn on **Enable Passkey authentication**
-4. Relying Party settings for GitHub Pages:
+4. Relying Party settings for the custom domain (see table above)
 
-| Field | Value |
-|-------|--------|
-| Relying Party Display Name | `Knight Watts Admin` |
-| Relying Party ID | `dalmus123.github.io` (no scheme/path) |
-| Relying Party Origins | `https://dalmus123.github.io` (add `http://localhost:8080` for local testing) |
+HTTPS is required (GitHub Pages custom domain with HTTPS enforced).
 
-HTTPS is required (GitHub Pages already is). Changing RP ID later invalidates existing passkeys.
-
-### 2. Client (already in this PR)
+### 2. Client
 
 - CDN: `@supabase/supabase-js@2.119.2` (≥ 2.105 required)
 - `supabase/config.js` sets `auth.experimental.passkey: true`
 - Uses **anon key only** — never the service role key
+- `js/site-base.js` → `KWSite.passkeyRpId()` reports the RP ID for the current host (docs / UI hints)
 
 ### 3. User flow
 
-1. Sign in with **password** (or Sign In User modal)
+1. Sign in with **password** (or Switch account modal)
 2. Open **Security** in the sidebar → **Register passkey** (Face ID / Touch ID)
 3. Next visit: use **Sign in with passkey**, or pick the passkey from the browser autofill dropdown (Conditional UI)
 
@@ -79,7 +88,7 @@ Jurisdiction is enforced by **RLS** (and SECURITY DEFINER helpers). Sidebar hidi
 | Telemetry | ✓ | — | ✓ | ✓ | — | — |
 | Analytics | ✓ | ✓ | — | ✓ | — | — |
 | Reports / exports | ✓ | ✓ | — | — | — | — |
-| User Management | ceo/owner | — | — | — | — | — |
+| User Management | ceo/owner/admin + cos (scoped) | — | — | sales roles | — | — |
 | My Sales | ✓ | ✓ | — | ✓ | ✓ | own |
 | Sales Team / commissions payable | ✓ | ✓ | — | ✓ | ✓ | — |
 | Sales Tasks | ✓ | — | ✓ | ✓ | ✓ | assigned |
@@ -91,8 +100,4 @@ Home routes after sign-in: CEO → company dashboard; CFO → finance desk; COO 
 
 ## Service worker
 
-Cache bumped to `knight-watts-v1.4.1-ceo-login-sw-force`. Admin HTML/JS/CSS use **network-first**; on activate the SW posts `FORCE_RELOAD` so iPhone PWAs do not keep a stale `admin.js` allowlist that rejected `ceo` / `cfo` / `coo` / `cos`.
-
-### Login bug after #28 (fixed in follow-up)
-
-Auth succeeded (`last_sign_in_at` set) but the panel signed the user out: a cache-first service worker could still serve pre-#28 `admin.js` whose `allowedRoles` omitted C-suite. RLS already allows every user to `SELECT` their own `user_profiles` row (`users_own_profile`). GitHub Pages had the merged files; the stale SW was the failure mode.
+Cache bumped to `knight-watts-v1.4.3-custom-domain`. Base path is derived from the SW script directory so the same worker works on the custom domain root and the `/knight-watts-auto-parts/` project URL. Admin HTML/JS/CSS use **network-first**; on activate the SW posts `FORCE_RELOAD`.
