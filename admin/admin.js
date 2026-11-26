@@ -84,7 +84,7 @@ function setupPasskeyLogin() {
 }
 
 // Service Worker Update Handling — force new versions (stale admin.js omitted ceo/cfo/coo/cos)
-const EXPECTED_SW_CACHE = 'knight-watts-v1.4.3-custom-domain';
+const EXPECTED_SW_CACHE = 'knight-watts-v1.4.4-passkey-abort';
 let swForceReloading = false;
 
 function forceAppReload(reason) {
@@ -306,6 +306,11 @@ function showAdminPanel() {
             showMustChangePasswordScreen(currentUserProfile);
         }
         return;
+    }
+
+    // Stop login Conditional UI so Security → Register passkey is not blocked by a pending get()
+    if (typeof abortPasskeyConditionalUI === 'function') {
+        abortPasskeyConditionalUI('show-admin-panel');
     }
 
     document.getElementById('loginScreen').style.display = 'none';
