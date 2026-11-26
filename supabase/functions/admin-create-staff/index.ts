@@ -12,6 +12,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
+// CORS: wildcard so both custom domain (knightwatts.co.ke) and the legacy
+// GitHub Pages origin (dalmus123.github.io) work during DNS switchover.
+// Browser Authorization header still required; JWT + role checked below.
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -201,8 +204,13 @@ serve(async (req) => {
       let userId: string | null = null;
 
       if (invite) {
+        const redirectTo =
+          typeof body.redirect_to === "string" && body.redirect_to.startsWith("https://")
+            ? body.redirect_to
+            : undefined;
         const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
           data: { full_name: fullName },
+          ...(redirectTo ? { redirectTo } : {}),
         });
         if (error) return json(400, { error: error.message });
         userId = data.user?.id ?? null;

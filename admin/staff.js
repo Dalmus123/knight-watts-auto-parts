@@ -335,6 +335,11 @@ async function submitAddStaff(event) {
       invite
     };
     if (!invite) payload.password = password;
+    if (invite) {
+      payload.redirect_to = (typeof KWSite !== 'undefined')
+        ? KWSite.siteHref('admin/')
+        : new URL('../admin/', window.location.href).href;
+    }
 
     const result = await invokeStaffAdmin(payload);
     closeAddStaffModal();

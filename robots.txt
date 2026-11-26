@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Canonical host is the apex custom domain (www redirects via GitHub Pages).
+Sitemap: https://knightwatts.co.ke/sitemap.xml

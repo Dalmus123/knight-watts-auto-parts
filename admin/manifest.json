@@ -2,6 +2,7 @@
   "name": "Knight Watts Admin - JARVIS",
   "short_name": "KW Admin",
   "description": "Knight Watts Auto Parts admin dashboard with JARVIS AI interface for inventory, orders, and 3D print management.",
+  "id": "./",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#0a0a0a",

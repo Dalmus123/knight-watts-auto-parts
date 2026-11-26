@@ -5,12 +5,13 @@
 // IMPORTANT: bump CACHE_NAME on every admin auth / role change so iPhone PWAs
 // drop stale admin.js (old allowlists that rejected ceo/cfo/coo/cos).
 
-const CACHE_NAME = 'knight-watts-v1.4.2-add-staff';
-const OFFLINE_URL = '/offline.html';
+const CACHE_NAME = 'knight-watts-v1.4.3-custom-domain';
+const OFFLINE_PATH = '/offline.html';
 
-// Get the base path for GitHub Pages (e.g., /knight-watts-auto-parts)
-const BASE_PATH = self.location.pathname.split('/')[1] || '';
-const basePath = BASE_PATH ? `/${BASE_PATH}` : '';
+// Site root from SW script directory — works for:
+//   /service-worker.js                         (custom domain apex)
+//   /knight-watts-auto-parts/service-worker.js  (GitHub Pages project URL)
+const basePath = self.location.pathname.replace(/\/[^/]*$/, '');
 
 // Files to cache for offline use (static UI only)
 const STATIC_ASSETS = [
@@ -27,6 +28,7 @@ const STATIC_ASSETS = [
   basePath + '/signup.html',
   basePath + '/styles.css',
   basePath + '/app.js',
+  basePath + '/js/site-base.js',
   basePath + '/js/pwa-nav.js',
   basePath + '/js/referral.js',
   basePath + '/js/backend-integration.js',
@@ -37,6 +39,7 @@ const STATIC_ASSETS = [
   basePath + '/3d-printing-ui.js',
   basePath + '/manifest.json',
   basePath + '/offline.html',
+  basePath + '/robots.txt',
   basePath + '/admin/index.html',
   basePath + '/admin/admin.js',
   basePath + '/admin/admin.css',
@@ -156,7 +159,7 @@ self.addEventListener('fetch', (event) => {
           })
           .catch(() => {
             if (cachedResponse) return cachedResponse;
-            return caches.match(basePath + OFFLINE_URL);
+            return caches.match(basePath + OFFLINE_PATH);
           });
       }
 
@@ -215,8 +218,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body || 'New update from Knight Watts Auto Parts',
-    icon: '/icon-192x192.png',
-    badge: '/icon-72x72.png',
+    icon: basePath + '/icon-192x192.png',
+    badge: basePath + '/icon-192x192.png',
     vibrate: [200, 100, 200],
     tag: data.tag || 'default',
     data: data.url ? { url: data.url } : {}

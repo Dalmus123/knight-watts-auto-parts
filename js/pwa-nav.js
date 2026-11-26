@@ -20,6 +20,7 @@
     function isStorefrontHome() {
         var path = (window.location.pathname || '').replace(/\/+$/, '');
         var file = path.split('/').pop() || '';
+        // Custom domain apex (/), project Pages root (/knight-watts-auto-parts), or index.html
         return file === '' || file === 'index.html' || file === 'knight-watts-auto-parts';
     }
 
@@ -125,9 +126,21 @@
 
     window.kwNavigateBack = navigateBack;
 
+    function registerStorefrontServiceWorker() {
+        if (!('serviceWorker' in navigator)) return;
+        // Same SW as admin; scope = site root on both custom domain and project Pages.
+        var swHref = (window.KWSite && KWSite.siteHref)
+            ? KWSite.siteHref('service-worker.js')
+            : 'service-worker.js';
+        var base = (window.KWSite && KWSite.getSiteBasePath) ? KWSite.getSiteBasePath() : '';
+        var scopeHref = base ? base + '/' : '/';
+        navigator.serviceWorker.register(swHref, { scope: scopeHref }).catch(function () { /* ignore */ });
+    }
+
     function init() {
         detectDisplayMode();
         injectBackButton();
+        registerStorefrontServiceWorker();
     }
 
     if (document.readyState === 'loading') {

@@ -14,6 +14,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase/config.js"></script>
+    <script src="js/site-base.js?v=1.4.3-domain"></script>
     <style>
         .auth-container {
             min-height: 100vh;
@@ -426,10 +427,13 @@
 
             try {
                 const returnUrl = new URLSearchParams(window.location.search).get('return') || 'index.html';
+                const redirectTo = (typeof KWSite !== 'undefined')
+                    ? KWSite.siteHref(returnUrl)
+                    : new URL(returnUrl.replace(/^\//, ''), window.location.href).href;
                 const { data, error } = await supabaseClient.auth.signInWithOAuth({
                     provider: 'google',
                     options: {
-                        redirectTo: window.location.origin + '/' + returnUrl
+                        redirectTo
                     }
                 });
 
