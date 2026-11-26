@@ -62,6 +62,11 @@ Manual and subledger posts use `fin_post_entry` / subledger tables with the same
 - CEO payslip detail gated by `fin_settings.ceo_can_view_payslips`.
 - RLS is role-based only (no per-entity RLS).
 
+## Security
+
+- Write RPCs (`fin_post_entry`, `fin_reverse_entry`, `fin_post_intercompany`, `fin_post_elimination`, `fin_ensure_periods`, `fin_clone_coa`, `fin_run_depreciation`, `fin_run_recurring`, `fin_repost_source`, …) require `fin_can_write()` when not running inside a trigger (`pg_trigger_depth() = 0`).
+- `fin_seed_from_sources` is **service-role only** (EXECUTE revoked from `PUBLIC`, `anon`, and `authenticated`).
+
 ## Period close (recommended order)
 
 1. **SHOP** — reconcile bank (`fin_bank_lines`), AR/AP subledgers (`fin_invoices` / `fin_bills`), inventory/FIFO, payroll drafts, post recurring templates.
@@ -96,5 +101,7 @@ Apply in order:
 9. `20261126120008_fin_auto_post_triggers.sql`
 10. `20261126120009_fin_seed_from_sources.sql`
 11. `20261126120011_fin_posting_and_reports_fix.sql`
+12. `20261126125829_fin_security_hardening.sql` (already applied live — keep in repo for fresh DBs)
+13. `20261126132507_fin_security_hardening_2.sql` (already applied live — keep in repo for fresh DBs)
 
 SQL regression tests live in `supabase/tests/fin_core_tests.sql` (not auto-applied). `fin_seed_from_sources()` is defined in `20261126120009` but **must not** run during migrate on production.

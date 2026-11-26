@@ -1,5 +1,6 @@
 -- Finance core tests (NOT auto-applied). Run via psql or pgTAP in a scratch DB.
 -- Synthetic fixtures only; cleans up after itself.
+-- Requires a user_profiles row with role = cfo for the JWT sub below (no company PII).
 
 DO $$
 DECLARE
@@ -13,6 +14,15 @@ DECLARE
   v_ic_a uuid;
   v_ic_b uuid;
 BEGIN
+  -- CFO JWT claims so fin_can_write() / guarded write RPCs authorize (scratch DB only)
+  PERFORM set_config(
+    'request.jwt.claims',
+    '{"sub":"5898ad44-39e8-491b-a7f2-dfaf1d883608","role":"authenticated"}',
+    true
+  );
+  PERFORM set_config('request.jwt.claim.sub', '5898ad44-39e8-491b-a7f2-dfaf1d883608', true);
+  PERFORM set_config('role', 'authenticated', true);
+
   SELECT id INTO v_parent FROM public.fin_entities WHERE code = 'PARENT';
   SELECT id INTO v_shop FROM public.fin_entities WHERE code = 'SHOP';
   v_ent := v_shop;
