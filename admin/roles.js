@@ -22,6 +22,7 @@ const PAGE_ROLES = {
   deliveries: ['owner', 'admin', 'ceo', 'coo', 'hq_readonly'],
   analytics: ['owner', 'admin', 'ceo', 'cfo', 'cos', 'hq_readonly'],
   reports: ['owner', 'admin', 'ceo', 'cfo', 'hq_readonly'],
+  finance: ['cfo', 'ceo', 'owner'],
   users: ['owner', 'admin', 'ceo', 'cos'],
   security: STAFF_ROLES,
   'my-sales': ['owner', 'admin', 'ceo', 'cfo', 'cos', 'chief_of_sales', 'sales_rep'],
@@ -36,7 +37,7 @@ const ROLE_HOME = {
   owner: 'dashboard',
   admin: 'dashboard',
   ceo: 'dashboard',
-  cfo: 'dashboard',
+  cfo: 'finance',
   coo: 'dashboard',
   cos: 'sales-team',
   chief_of_sales: 'sales-team',
@@ -238,30 +239,13 @@ async function loadCeoDashboard(content) {
 }
 
 async function loadCfoDashboard(content) {
-  content.innerHTML = `
-    ${roleDashIntro('Finance desk', 'Revenue, commissions payable, stock levels, inventory valuation, reports.')}
-    <div class="stats-grid">
-      ${roleStatCard('Revenue (KES)', 'finRevenue')}
-      ${roleStatCard('Orders', 'finOrders')}
-      ${roleStatCard('Inventory value', 'finInvValue')}
-      ${roleStatCard('Units in stock', 'finInvUnits')}
-      ${roleStatCard('Low-stock SKUs', 'finLowStock')}
-      ${roleStatCard('Comm. pending', 'finCommPending')}
-      ${roleStatCard('Comm. approved', 'finCommApproved')}
-      ${roleStatCard('Comm. paid', 'finCommPaid')}
-    </div>
-    <div class="role-quick-links">
-      <button type="button" class="btn btn-primary" onclick="navigateToRoute('sales-team')">Commissions payable</button>
-      <button type="button" class="btn btn-outline" onclick="navigateToRoute('products')">Stock & valuation</button>
-      <button type="button" class="btn btn-outline" onclick="navigateToRoute('reports')">Reports / exports</button>
-      <button type="button" class="btn btn-outline" onclick="navigateToRoute('my-sales')">Sales revenue</button>
-    </div>
-    <div class="table-container">
-      <div class="table-header"><h3>Low stock (inventory risk)</h3></div>
-      <div id="finLowStockTable"><div class="empty-state"><p>Loading…</p></div></div>
-    </div>
-  `;
-  await fillFinanceDashboard();
+  if (typeof navigateToRoute === 'function') {
+    navigateToRoute('finance');
+    return;
+  }
+  if (typeof loadFinancePage === 'function') {
+    await loadFinancePage('finance');
+  }
 }
 
 async function loadCooDashboard(content) {

@@ -422,9 +422,11 @@ function navigateToRoute(route, pushHistory = true) {
         window.location.hash = '#/' + route;
     }
     
-    // Update active nav item
+    // Update active nav item (finance/* → finance)
+    const navRoute = route.split('?')[0];
+    const navPage = navRoute.startsWith('finance') ? 'finance' : navRoute;
     document.querySelectorAll('.nav-item').forEach(item => {
-        if (item.dataset.page === route) {
+        if (item.dataset.page === navPage) {
             item.classList.add('active');
         } else {
             item.classList.remove('active');
@@ -480,6 +482,8 @@ function setupEventHandlers() {
 
 async function loadPage(page) {
     const contentArea = document.getElementById('contentArea');
+    const routePath = String(page).split('?')[0];
+    const navPage = routePath.startsWith('finance') ? 'finance' : routePath;
     
     // Update page title
     const titles = {
@@ -492,6 +496,7 @@ async function loadPage(page) {
         deliveries: 'Delivery Schedule',
         analytics: 'Analytics & Evaluations',
         reports: 'Reports',
+        finance: 'Finance',
         users: 'User Management',
         security: 'Security',
         'my-sales': 'My Sales',
@@ -501,19 +506,19 @@ async function loadPage(page) {
         'sales-reps': 'Sales Reps'
     };
     
-    document.getElementById('pageTitle').textContent = titles[page] || 'Dashboard';
+    document.getElementById('pageTitle').textContent = titles[navPage] || titles[page] || 'Dashboard';
 
     if (typeof unsubscribeSalesRealtime === 'function' &&
-        !['my-sales', 'sales-team', 'sales-tasks'].includes(page)) {
+        !['my-sales', 'sales-team', 'sales-tasks'].includes(navPage)) {
         unsubscribeSalesRealtime();
     }
 
-    if (typeof guardPageAccess === 'function' && !guardPageAccess(page)) {
+    if (typeof guardPageAccess === 'function' && !guardPageAccess(navPage)) {
         return;
     }
     
     // Load page content
-    switch (page) {
+    switch (navPage) {
         case 'dashboard':
             await loadDashboard();
             break;
@@ -540,6 +545,14 @@ async function loadPage(page) {
             break;
         case 'reports':
             await loadReports();
+            break;
+        case 'finance':
+            if (typeof loadFinancePage === 'function') {
+                await loadFinancePage(page);
+            } else {
+                contentArea.innerHTML =
+                    '<div class="empty-state"><h3>Finance module failed to load</h3></div>';
+            }
             break;
         case 'users':
             if (['owner', 'admin', 'ceo', 'cos'].includes(currentUserProfile.role)) {
