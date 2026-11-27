@@ -5,7 +5,7 @@
 // IMPORTANT: bump CACHE_NAME on every admin auth / role change so iPhone PWAs
 // drop stale admin.js (old allowlists that rejected ceo/cfo/coo/cos).
 
-const CACHE_NAME = 'knight-watts-v1.5.1-finance';
+const CACHE_NAME = 'knight-watts-v1.5.2-messages';
 const OFFLINE_PATH = '/offline.html';
 
 // Site root from SW script directory — works for:
@@ -22,6 +22,7 @@ const STATIC_ASSETS = [
   basePath + '/terms.html',
   basePath + '/3d-printing.html',
   basePath + '/filaments.html',
+  basePath + '/faq.html',
   basePath + '/filaments.css',
   basePath + '/filaments.js',
   basePath + '/login.html',
@@ -32,6 +33,7 @@ const STATIC_ASSETS = [
   basePath + '/js/pwa-nav.js',
   basePath + '/js/referral.js',
   basePath + '/js/backend-integration.js',
+  basePath + '/js/contact-form.js',
   basePath + '/grokbot.js',
   basePath + '/ai-chat-widget.js',
   basePath + '/ai-chat-widget.css',
@@ -51,6 +53,7 @@ const STATIC_ASSETS = [
   basePath + '/admin/finance-reports.js',
   basePath + '/admin/finance-payroll.js',
   basePath + '/admin/roles.js',
+  basePath + '/admin/messages.js',
   basePath + '/admin/passkeys.js',
   basePath + '/admin/staff.js'
 ].filter(path => path);

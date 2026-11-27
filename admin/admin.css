@@ -425,6 +425,20 @@ body {
     font-weight: 600;
 }
 
+.status-badge.new {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3B82F6;
+}
+
+.status-badge.handled {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+}
+
+a.action-btn {
+    text-decoration: none;
+}
+
 .status-badge.pending {
     background: rgba(245, 158, 11, 0.1);
     color: var(--warning);

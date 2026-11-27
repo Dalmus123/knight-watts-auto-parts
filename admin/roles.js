@@ -17,6 +17,7 @@ const PAGE_ROLES = {
   products: ['owner', 'admin', 'ceo', 'cfo', 'coo', 'sales_rep', 'chief_of_sales'],
   orders: ['owner', 'admin', 'ceo', 'cfo', 'coo', 'cos', 'chief_of_sales', 'sales_rep'],
   requests: ['owner', 'admin', 'ceo', 'coo'],
+  messages: ['owner', 'admin', 'ceo', 'cfo', 'coo', 'cos', 'chief_of_sales', 'sales_rep'],
   printqueue: ['owner', 'admin', 'ceo', 'coo', 'print_operator'],
   telemetry: ['owner', 'admin', 'ceo', 'coo', 'cos', 'hq_readonly', 'print_operator'],
   deliveries: ['owner', 'admin', 'ceo', 'coo', 'hq_readonly'],

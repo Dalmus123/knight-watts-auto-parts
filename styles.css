@@ -829,6 +829,66 @@ body {
     min-height: 120px;
 }
 
+.contact-form select {
+    padding: 14px 16px;
+    background: var(--dark-card);
+    border: 2px solid var(--dark-border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-family: inherit;
+}
+
+.contact-form select:focus {
+    outline: none;
+    border-color: var(--focus-ring);
+}
+
+/* Honeypot — off-screen, not display:none (some bots skip display:none fields) */
+.contact-form .hp-field {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.contact-form-status {
+    margin: 0;
+    min-height: 1.4em;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+
+.contact-form-status.is-success {
+    color: var(--text-primary);
+    border-left: 3px solid var(--success);
+    padding-left: 10px;
+}
+
+.contact-form-status.is-error {
+    color: var(--error);
+    border-left: 3px solid var(--error);
+    padding-left: 10px;
+}
+
+.contact-form-hint {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.contact-form-hint a {
+    color: var(--text-secondary);
+    text-decoration: underline;
+}
+
+.contact-form button[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 /* Footer */
 .footer {
     background: var(--dark-card);
