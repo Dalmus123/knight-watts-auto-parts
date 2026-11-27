@@ -24,9 +24,10 @@ supabase db push        # or run the supabase/migrations/*contact_messages*.sql 
 # 2. Edge Function
 supabase functions deploy contact-notify --project-ref selvxrprxbkznxtfesxe
 
-# 3. Secrets (never commit these)
-supabase secrets set RESEND_API_KEY='re_xxxxxxxx' \
-                     --project-ref selvxrprxbkznxtfesxe
+# 3. The Resend API key is stored in Supabase Vault as `resend_api_key`
+#    and is read by public.get_resend_api_key() (EXECUTE only for service_role).
+#    You may also set the Edge Function env RESEND_API_KEY; if present it is used first.
+#    Do not commit the key.
 # optional: CONTACT_NOTIFY_TO (default info@knightwatts.co.ke)
 #           CONTACT_NOTIFY_FROM (default Knight Watts Website <noreply@knightwatts.co.ke>)
 ```

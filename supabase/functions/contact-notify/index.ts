@@ -5,8 +5,10 @@
  * Trigger : Database webhook (INSERT on public.contact_messages) → POST here.
  * Mail    : Resend HTTPS API (POST https://api.resend.com/emails).
  *
- * Secrets (never hardcoded; set with `supabase secrets set`):
- *   RESEND_API_KEY    Resend API key with sending access on knightwatts.co.ke
+ * Secrets:
+ *   RESEND_API_KEY    optional Edge Function secret. If unset, the function
+ *                     reads it once from Vault via RPC public.get_resend_api_key()
+ *                     (EXECUTE granted only to service_role).
  * Optional:
  *   CONTACT_NOTIFY_TO default info@knightwatts.co.ke
  *   CONTACT_NOTIFY_FROM default Knight Watts Website <noreply@knightwatts.co.ke>
@@ -106,18 +108,30 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json(405, { error: "Method not allowed" });
 
-  const resendKey = Deno.env.get("RESEND_API_KEY");
   const notifyTo = Deno.env.get("CONTACT_NOTIFY_TO") || DEFAULT_TO;
   const notifyFrom = Deno.env.get("CONTACT_NOTIFY_FROM") || DEFAULT_FROM;
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
+  if (!supabaseUrl || !serviceKey) {
+    return json(500, { error: "Supabase environment not available" });
+  }
+
+  const admin = createClient(supabaseUrl, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  let resendKey = Deno.env.get("RESEND_API_KEY") || "";
+  if (!resendKey) {
+    const { data: vaultKey, error: vaultErr } = await admin.rpc("get_resend_api_key");
+    if (vaultErr) {
+      console.error("contact-notify vault rpc failed:", vaultErr.message);
+    }
+    if (typeof vaultKey === "string") resendKey = vaultKey;
+  }
   if (!resendKey) {
     // Not configured yet: do nothing (the message is already safe in the table).
     return json(503, { error: "RESEND_API_KEY not configured" });
-  }
-  if (!supabaseUrl || !serviceKey) {
-    return json(500, { error: "Supabase environment not available" });
   }
 
   let payload: any;
@@ -130,10 +144,6 @@ serve(async (req) => {
   if (typeof id !== "string" || !UUID_RE.test(id)) {
     return json(400, { error: "Missing or invalid record id" });
   }
-
-  const admin = createClient(supabaseUrl, serviceKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
 
   // Claim the row: only one notification per message, even if the webhook fires twice.
   const { data: claimed, error: claimErr } = await admin
