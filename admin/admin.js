@@ -84,7 +84,7 @@ function setupPasskeyLogin() {
 }
 
 // Service Worker Update Handling — force new versions (stale admin.js omitted ceo/cfo/coo/cos)
-const EXPECTED_SW_CACHE = 'knight-watts-v1.5.1-finance';
+const EXPECTED_SW_CACHE = 'knight-watts-v1.5.2-messages';
 let swForceReloading = false;
 
 function forceAppReload(reason) {
@@ -496,6 +496,7 @@ async function loadPage(page) {
         products: 'Products',
         orders: 'Orders',
         requests: 'Custom Requests',
+        messages: 'Website Messages',
         printqueue: 'Print Queue',
         telemetry: 'Live Telemetry',
         deliveries: 'Delivery Schedule',
@@ -535,6 +536,14 @@ async function loadPage(page) {
             break;
         case 'requests':
             await loadRequests();
+            break;
+        case 'messages':
+            if (typeof window.loadMessagesPage === 'function') {
+                await window.loadMessagesPage();
+            } else {
+                contentArea.innerHTML =
+                    '<div class="empty-state"><h3>Messages module failed to load</h3></div>';
+            }
             break;
         case 'printqueue':
             await loadPrintQueue();

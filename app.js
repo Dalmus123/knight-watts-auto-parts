@@ -1162,10 +1162,14 @@ function attachEventListeners() {
     locationFilter.addEventListener('change', filterProducts);
     
     // Contact form
+    // Saves the message to Supabase (public.contact_messages); see js/contact-form.js
     document.getElementById('contactForm').addEventListener('submit', (e) => {
         e.preventDefault();
-        alert('Thank you for your inquiry! We will contact you shortly.');
-        e.target.reset();
+        if (typeof window.submitContactForm === 'function') {
+            window.submitContactForm(e.target);
+        } else {
+            alert('Sorry, the contact form could not load. Please email info@knightwatts.co.ke.');
+        }
     });
 }
 

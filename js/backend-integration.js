@@ -336,5 +336,6 @@ window.backendIntegration = {
     uploadRequestAttachment,
     getProducts,
     isEnabled: () => backendEnabled,
+    getClient: () => backendClient,
     waitForInit: () => backendInitPromise
 };

@@ -61,6 +61,7 @@
                     <a href="3d-printing.html" class="nav-link">3D Printing</a>
                     <a href="#locations" class="nav-link">Locations</a>
                     <a href="#contact" class="nav-link">Contact</a>
+                    <a href="faq.html" class="nav-link">FAQ</a>
                 </nav>
                 <div class="header-actions">
                     <button class="location-btn" id="locationBtn" title="Filter products by location">
@@ -290,12 +291,27 @@
                         </div>
                     </div>
                 </div>
-                <form class="contact-form" id="contactForm">
-                    <input type="text" placeholder="Your Name" required>
-                    <input type="tel" placeholder="Phone Number" required>
-                    <input type="text" placeholder="Vehicle Make & Model">
-                    <textarea placeholder="What parts do you need?" rows="4" required></textarea>
-                    <button type="submit" class="btn btn-primary">Send Inquiry</button>
+                <form class="contact-form" id="contactForm" data-source="home-contact">
+                    <input type="text" name="name" placeholder="Your Name" required maxlength="100" autocomplete="name" aria-label="Your name">
+                    <input type="tel" name="phone" placeholder="Phone Number" required minlength="5" maxlength="30" autocomplete="tel" aria-label="Phone number">
+                    <input type="email" name="email" placeholder="Email (optional)" maxlength="254" autocomplete="email" aria-label="Email address (optional)">
+                    <select name="topic" aria-label="What is your message about?">
+                        <option value="parts">Parts enquiry</option>
+                        <option value="3d-printing">3D printing / custom part</option>
+                        <option value="order">An existing order</option>
+                        <option value="general">Something else</option>
+                    </select>
+                    <input type="text" name="vehicle" placeholder="Vehicle Make & Model" maxlength="120" aria-label="Vehicle make and model">
+                    <textarea name="message" placeholder="What parts do you need?" rows="4" required minlength="5" maxlength="2000" aria-label="Your message"></textarea>
+                    <!-- Honeypot: hidden from people, bots tend to fill it -->
+                    <div class="hp-field" aria-hidden="true">
+                        <label>Leave this field empty
+                            <input type="text" name="website" tabindex="-1" autocomplete="off">
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="contactSubmitBtn">Send Inquiry</button>
+                    <p class="contact-form-status" id="contactFormStatus" role="status" aria-live="polite"></p>
+                    <p class="contact-form-hint">Common questions? See our <a href="faq.html">FAQ</a>.</p>
                 </form>
             </div>
         </div>
@@ -315,6 +331,7 @@
                     <a href="filaments.html">Filaments</a>
                     <a href="#locations">Our Locations</a>
                     <a href="#contact">Contact Us</a>
+                    <a href="faq.html">FAQ</a>
                 </div>
                 <div class="footer-section">
                     <h4>Payment Methods</h4>
@@ -400,6 +417,7 @@
     <script src="supabase/config.js"></script>
     <script src="js/site-base.js?v=1.4.3-domain"></script>
     <script src="js/backend-integration.js"></script>
+    <script src="js/contact-form.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
     <!-- Google Model Viewer for 3D GLB/GLTF display and AR support -->
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
